@@ -37,6 +37,8 @@ function RootStack() {
     <Stack screenOptions={{ headerBackTitle: t('common.back') }}>
       {/* Invite links work whether or not you're signed in. */}
       <Stack.Screen name="i/[token]" options={{ title: '' }} />
+      {/* Co-host links handle signed-out / onboarding users themselves (pending-co-host). */}
+      <Stack.Screen name="c/[token]" options={{ title: '' }} />
       <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
       <Stack.Screen name="claim" options={{ headerShown: false }} />
 

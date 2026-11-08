@@ -1,6 +1,12 @@
 import 'server-only';
 
-import { isValidInviteToken, type RsvpStatus } from '@check-in/shared';
+import {
+  formatHostNames,
+  hostedByKey,
+  isValidInviteToken,
+  type Locale,
+  type RsvpStatus,
+} from '@check-in/shared';
 import { cache } from 'react';
 
 import { publicClient } from './supabase';
@@ -46,6 +52,8 @@ export type Invite =
       state: 'active' | 'past';
       event: InviteEvent;
       host: { display_name: string | null; avatar_path: string | null };
+      /** Co-host display names, in the order they joined (add-co-hosts). */
+      co_hosts?: { display_name: string | null }[];
       counts: { going: number; maybe: number };
       guests: { display_name: string; status: RsvpStatus }[] | null;
       my_rsvp: MyRsvp | null;
@@ -53,6 +61,17 @@ export type Invite =
     };
 
 export const GUEST_COOKIE = 'ci_guest';
+
+/** "Hosted by Anna & Erik" — owner first, then co-hosts in join order (spec: co-hosts). */
+export function hostedByLine(
+  invite: { host: { display_name: string | null }; co_hosts?: { display_name: string | null }[] },
+  locale: Locale,
+  t: (key: string, vars?: Record<string, string>) => string,
+): string {
+  const coHosts = (invite.co_hosts ?? []).map((h) => h.display_name);
+  const key = hostedByKey(invite.host.display_name, coHosts);
+  return t(`invite.${key}`, { name: formatHostNames(invite.host.display_name, coHosts, locale) });
+}
 
 /** Memoized per request so generateMetadata and the page share one call. */
 export const getInvite = cache(async (token: string, guestToken?: string): Promise<Invite> => {

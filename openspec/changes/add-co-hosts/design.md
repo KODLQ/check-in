@@ -11,6 +11,28 @@ See proposal.md for motivation and `specs/` for required behavior. Current state
 - The app's event list is `select *, rsvps(status) from events` and relies on RLS for scoping; the live guest list is Realtime `postgres_changes` on `rsvps`, which applies the `rsvps` SELECT policy per subscriber.
 - Profiles are readable only by their owner.
 
+## Rebase onto landed changes (added at implementation time)
+
+This design was written before `add-guest-updates`, `add-my-invites` and `add-story-share-card` were applied. Reconciled as follows (migrations now go up to `20261108000016`; this change adds `20261108000017_co_hosts.sql`):
+
+- **`is_event_manager(event_id)` already existed** (add-guest-updates, `20261108000008`) as a wrapper around `is_event_host`, together with `is_event_manager_for(event_id, user_id)` (evaluates it as another user). This change only *redefines* `is_event_manager` as `is_event_owner(id) or is_event_co_host(id)`; everything built on it picks up co-hosts with no further change: announcement post/delete and the announcements SELECT policy, the `event_managers` notification audience (reply digest, push deep link to the host view in `claim_deliveries`), the "manager's own RSVP doesn't trigger the digest" check, and `list_my_invites` (which excludes managed events, so a co-hosted event never shows as an invite). Spec deltas were added for `event-announcements`, `my-invites` and `notifications` so the specs say so.
+- **Hosted list:** the app's hosted list is still `from('events').select('*, rsvps(status)')`; widening the events/rsvps SELECT policies makes co-hosted events (with counts) appear. The label is derived client-side (`host_id !== session.user.id` → "Co-host").
+- **`get_invite`** now builds its payload in `invite_payload(ev, me, guest_device)` (add-my-invites); `co_hosts` was added there, so `get_my_invite` returns host names too.
+- **`run_retention(p_now)`** was redefined in `20261108000016`; the new definition keeps every existing cleanup line and appends the co-host-link purge.
+- **`delete-account`** is still a thin function (RSVP withdrawal/claimed-RSVP deletion happens by FK cascade from `profiles`); the event-folder cover cleanup is added before the existing folder cleanup.
+- **Story share card:** the in-app Share to Story button and the web guest Share action are available to co-hosts (they use the active invite token, readable by managers). The story image itself keeps showing only the owner's name: its layout and the spec's "host name stays fully visible" rule are built for one name, and up to six 50-char names would not fit. The invite page, `generateMetadata` and the OG card show all host names.
+- **pgTAP numbering:** the original plan's `08_co_hosts.test.sql` collided with existing files. Tests live in `16_co_hosts.test.sql` (schema, helpers, policies, sibling-change checks) and `17_co_host_invites.test.sql` (RPCs, names, retention, deletion); `07_storage.test.sql` was extended. The reusable fixture is `supabase/tests/fixtures/co_hosts.psql` (included with `\ir`; not picked up by pg_prove as a test).
+
+### Implementation notes / deviations
+
+- Error codes: `create_co_host_invite` raises `owner_only` for a co-host, `not_found` for anyone else, `event_closed` for cancelled/ended events, `co_host_limit` when full. `accept_co_host_invite` raises `invalid_invite` (all invalid cases), `already_host` (owner), `name_required`, `co_host_limit`; an existing co-host gets the event id back without consuming the link. `remove_co_host` raises `owner_only` for co-hosts. `events_guard` raises `owner_only` and `invalid_cover`.
+- Shared validity check `open_co_host_invite(token, lock)` (internal) is used by `get_co_host_invite`, `accept_co_host_invite` and `get_co_host_invite_preview`, so all three treat unknown/expired/revoked/used/cancelled/ended identically. Slot counting is in `co_host_slots_used(event_id)`; the limit is `max_co_hosts()` (5).
+- `events_guard` also rejects `..` in `cover_path`; the event-folder storage policy additionally requires exactly `e/<event id>/<file>` (no nested folders).
+- `is_event_owner/co_host/manager/host` are granted to `authenticated` and `service_role` only.
+- **Removed co-host who has the screen open:** a removed co-host no longer receives Realtime `rsvps` changes (verified), so "reload on every rsvps change" alone would never tell them. The event screen therefore re-checks access every 30 s while focused, on focus, on every rsvps change it still receives and after a failed action; an empty result shows "You're no longer a co-host of this event" and goes back. The edit screen does the same on load and reports `no_access` if an update matches no row.
+- **Accept route return path:** signed-out / not-onboarded users opening `/c/<token>` get the token stored (`ci_pending_co_host`, 7-day max age) and are sent to sign-in / onboarding; every sign-in path lands on the home screen, which resumes the pending link. This avoids racing the auth-callback redirect.
+- Android: `assetlinks.json` only verifies the domain; handled paths come from app intent filters, which are not configured for `/i/*` either (pre-existing). The iOS AASA now lists `/c/*`.
+
 ## Goals / Non-Goals
 
 **Goals:**

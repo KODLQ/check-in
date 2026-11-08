@@ -1,0 +1,51 @@
+-- Reusable co-host fixture (change: add-co-hosts). Include after plan() with:
+--   \ir fixtures/co_hosts.psql
+-- It is not a test file itself (pg_prove only runs *.sql), and it runs inside the caller's transaction,
+-- so everything is rolled back with the test. All ids are fixed and unique to this fixture, and tests
+-- filter on them, so leftover local data never changes the results.
+--
+-- Users: owner A, co-host B, stranger C, former co-host D (removed), signed-in guest S (own RSVP).
+-- Event E1 (upcoming, owned by A) with guest link 'CoHostTest01' and four RSVPs:
+--   Gina (web, going), Sara = S (account, going), Milo (web, maybe), Xena (web, declined).
+-- Switch identity with :as_A / :as_B / :as_C / :as_D / :as_S followed by `set local role authenticated;`.
+
+\set A '00000000-0000-0000-0000-00000000c0a1'
+\set B '00000000-0000-0000-0000-00000000c0b1'
+\set C '00000000-0000-0000-0000-00000000c0c1'
+\set D '00000000-0000-0000-0000-00000000c0d1'
+\set S '00000000-0000-0000-0000-00000000c0e1'
+\set E1 'c0000000-0000-0000-0000-0000000000e1'
+\set as_A 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-00000000c0a1","role":"authenticated"}'', true);'
+\set as_B 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-00000000c0b1","role":"authenticated"}'', true);'
+\set as_C 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-00000000c0c1","role":"authenticated"}'', true);'
+\set as_D 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-00000000c0d1","role":"authenticated"}'', true);'
+\set as_S 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-00000000c0e1","role":"authenticated"}'', true);'
+\set as_anon 'select set_config(''request.jwt.claims'', ''{"role":"anon"}'', true);'
+
+reset role;
+insert into auth.users (id, email) values
+  (:'A', 'cohost-owner@test.dev'),
+  (:'B', 'cohost-b@test.dev'),
+  (:'C', 'cohost-stranger@test.dev'),
+  (:'D', 'cohost-former@test.dev'),
+  (:'S', 'cohost-guest@test.dev');
+update public.profiles set display_name = 'Anna' where id = :'A';
+update public.profiles set display_name = 'Erik' where id = :'B';
+update public.profiles set display_name = 'Cecilia' where id = :'C';
+update public.profiles set display_name = 'Doris' where id = :'D';
+update public.profiles set display_name = 'Sara' where id = :'S';
+
+insert into public.events (id, host_id, title, starts_at, location_text, created_at)
+values (:'E1', :'A', 'Co-host party', now() + interval '2 days', 'Secret St 1', now() - interval '2 hours');
+update public.event_invites set token = 'CoHostTest01' where event_id = :'E1';
+
+insert into public.event_co_hosts (event_id, user_id, added_at) values
+  (:'E1', :'B', now() - interval '1 hour'),
+  (:'E1', :'D', now() - interval '50 minutes');
+delete from public.event_co_hosts where event_id = :'E1' and user_id = :'D';
+
+insert into public.rsvps (id, event_id, user_id, guest_token_hash, display_name, status) values
+  ('c0000000-0000-0000-0000-0000000000f1', :'E1', null, public.hash_guest_token('cohost-guest-gina-0000000001'), 'Gina', 'going'),
+  ('c0000000-0000-0000-0000-0000000000f2', :'E1', :'S', null, 'Sara', 'going'),
+  ('c0000000-0000-0000-0000-0000000000f3', :'E1', null, public.hash_guest_token('cohost-guest-milo-0000000001'), 'Milo', 'maybe'),
+  ('c0000000-0000-0000-0000-0000000000f4', :'E1', null, public.hash_guest_token('cohost-guest-xena-0000000001'), 'Xena', 'declined');

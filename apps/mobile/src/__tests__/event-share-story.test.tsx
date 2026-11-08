@@ -31,13 +31,14 @@ jest.mock('@/lib/supabase', () => {
   const builder = (table: string) => {
     const result = () => (table === 'events' ? { data: mockEvent } : { data: [] });
     const b: Record<string, unknown> = {};
-    for (const m of ['select', 'eq', 'order', 'update']) b[m] = () => b;
+    for (const m of ['select', 'eq', 'order', 'update', 'is', 'gt']) b[m] = () => b;
     b.single = async () => result();
+    b.maybeSingle = async () => result();
     b.then = (res: (v: unknown) => unknown) => Promise.resolve(result()).then(res);
     return b;
   };
   const channel = { on: () => channel, subscribe: () => channel };
-  return { supabase: { from: builder, channel: () => channel, removeChannel: jest.fn(), rpc: jest.fn() } };
+  return { supabase: { from: builder, channel: () => channel, removeChannel: jest.fn(), rpc: jest.fn(async () => ({ data: [] })) } };
 });
 
 const inDays = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();

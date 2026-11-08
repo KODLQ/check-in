@@ -7,21 +7,34 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, Switch
 
 import { AnnouncementComposer, AnnouncementList, AnnouncementsCard, type AnnouncementItem } from '@/components/announcements';
 import { Cover } from '@/components/cover';
+import { HostsCard } from '@/components/hosts-card';
 import { StoryShareButton } from '@/components/story-share-button';
 import { Toast } from '@/components/toast';
-import { Body, Button, Card, Label, Screen, useColors } from '@/components/ui';
+import { Body, Button, Card, Label, Screen, Title, useColors } from '@/components/ui';
+import { useAuth } from '@/lib/auth';
 import { INVITE_BASE_URL } from '@/lib/config';
 import { fetchActiveInvite } from '@/lib/events';
 import { locale } from '@/lib/i18n';
 import { supabase, type EventRow, type RsvpRow } from '@/lib/supabase';
 
 const GROUPS: RsvpStatus[] = ['going', 'maybe', 'declined'];
+/** While the screen is focused, re-check access this often so a removed co-host is told promptly. */
+const ACCESS_CHECK_MS = 30_000;
+
+function goBack() {
+  if (router.canGoBack()) router.back();
+  else router.replace('/');
+}
 
 export default function EventDetail() {
   const { t } = useTranslation();
   const c = useColors();
   const { id, created } = useLocalSearchParams<{ id: string; created?: string }>();
+  const { session } = useAuth();
+  const userId = session?.user.id;
   const [event, setEvent] = useState<EventRow | null>(null);
+  // RLS returns no row once you are no longer the owner or a co-host (removed, left, event deleted).
+  const [gone, setGone] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [rsvps, setRsvps] = useState<RsvpRow[]>([]);
   const [copied, setCopied] = useState(false);
@@ -44,17 +57,33 @@ export default function EventDetail() {
   }, [id]);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('events').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('events').select('*').eq('id', id).maybeSingle();
+    if (!data) {
+      if (!error) setGone(true);
+      return;
+    }
     setEvent(data);
     setToken(await fetchActiveInvite(id));
     await Promise.all([loadRsvps(), loadAnnouncements()]);
   }, [id, loadRsvps, loadAnnouncements]);
 
+  const checkAccess = useCallback(async () => {
+    const { data, error } = await supabase.from('events').select('id').eq('id', id).maybeSingle();
+    if (!data && !error) setGone(true);
+  }, [id]);
+
   useFocusEffect(
     useCallback(() => {
       void load();
-    }, [load]),
+      const timer = setInterval(() => void checkAccess(), ACCESS_CHECK_MS);
+      return () => clearInterval(timer);
+    }, [load, checkAccess]),
   );
+
+  useEffect(() => {
+    if (!gone) return;
+    Alert.alert(t('co_hosts.no_longer'), undefined, [{ text: 'OK', onPress: goBack }]);
+  }, [gone, t]);
 
   // Live guest list (Realtime respects RLS, so only the host receives these rows).
   useEffect(() => {
@@ -63,12 +92,23 @@ export default function EventDetail() {
       .channel(`rsvps:${id}:${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps', filter: `event_id=eq.${id}` }, () => {
         void loadRsvps();
+        void checkAccess();
       })
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [id, loadRsvps]);
+  }, [id, loadRsvps, checkAccess]);
+
+  if (gone) {
+    return (
+      <Screen style={{ justifyContent: 'center' }}>
+        <Stack.Screen options={{ headerRight: undefined }} />
+        <Title>{t('co_hosts.no_longer')}</Title>
+        <Button testID="no-longer-back" title={t('common.back')} onPress={goBack} />
+      </Screen>
+    );
+  }
 
   if (!event) {
     return (
@@ -82,6 +122,8 @@ export default function EventDetail() {
   const when = formatTimeRange(new Date(event.starts_at), event.ends_at ? new Date(event.ends_at) : null, locale, event.time_zone);
   const ended = hasEventEnded(new Date(event.starts_at), event.ends_at ? new Date(event.ends_at) : null);
   const editable = !ended && !event.cancelled_at;
+  // Owner-only actions (cancel, co-host management) are also enforced server-side.
+  const isOwner = !!userId && event.host_id === userId;
 
   async function share() {
     if (!link || !event) return;
@@ -117,6 +159,7 @@ export default function EventDetail() {
         onPress: async () => {
           const { data } = await supabase.rpc('regenerate_invite', { p_event_id: id });
           if (data) setToken(data);
+          else await load();
         },
       },
     ]);
@@ -125,6 +168,21 @@ export default function EventDetail() {
   async function toggleGuestList(visible: boolean) {
     setEvent({ ...event!, guest_list_visible: visible });
     await supabase.from('events').update({ guest_list_visible: visible }).eq('id', id);
+    await checkAccess();
+  }
+
+  function confirmLeave() {
+    Alert.alert(t('co_hosts.leave_confirm_title'), t('co_hosts.leave_confirm_body'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('co_hosts.leave'),
+        style: 'destructive',
+        onPress: async () => {
+          await supabase.rpc('leave_event', { p_event_id: id });
+          goBack();
+        },
+      },
+    ]);
   }
 
   function deleteAnnouncement(a: AnnouncementItem) {
@@ -236,11 +294,26 @@ export default function EventDetail() {
           );
         })}
 
+        <HostsCard
+          eventId={id}
+          eventTitle={event.title}
+          timeZone={event.time_zone}
+          userId={userId}
+          isOwner={isOwner}
+          canInvite={editable}
+          onAccessLost={checkAccess}
+        />
+
         {editable ? (
           <View style={{ gap: 10, marginTop: 12 }}>
             <Button variant="secondary" title={t('events.regenerate_link')} onPress={confirmRegenerate} />
-            <Button variant="danger" title={t('events.cancel_event')} onPress={confirmCancel} />
+            {isOwner ? (
+              <Button testID="cancel-event" variant="danger" title={t('events.cancel_event')} onPress={confirmCancel} />
+            ) : null}
           </View>
+        ) : null}
+        {!isOwner ? (
+          <Button testID="leave-co-host" variant="ghost" title={t('co_hosts.leave')} onPress={confirmLeave} />
         ) : null}
       </ScrollView>
       <Toast message={toast} onHide={hideToast} topOffset={64} />

@@ -22,12 +22,14 @@ jest.mock('@/components/cover', () => {
   return { Cover: ({ children }: { children: unknown }) => <View>{children as never}</View> };
 });
 jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn(), rpc: jest.fn() } }));
+jest.mock('@/lib/auth', () => ({ useAuth: () => ({ session: { user: { id: 'me' } } }) }));
 
 const DAY = 86_400_000;
 const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY).toISOString();
 
-const hostedEvent = (id: string, title: string, offsetDays: number) => ({
+const hostedEvent = (id: string, title: string, offsetDays: number, hostId = 'me') => ({
   id,
+  host_id: hostId,
   title,
   starts_at: iso(offsetDays),
   ends_at: null,
@@ -139,5 +141,34 @@ describe('home list', () => {
     await render(<Events />);
     expect(await screen.findByTestId('invite-i1')).toBeTruthy();
     expect(screen.queryByTestId('plan-own-card')).toBeNull();
+  });
+
+  it('labels co-hosted events "Co-host" among the hosted events, in start-time order', async () => {
+    mockData(
+      [hostedEvent('h1', 'My dinner', 3), hostedEvent('h2', 'Anna party', 2, 'anna')],
+      [invite('h2', 'Anna party', 2, 'going')],
+    );
+    await render(<Events />);
+    expect(await screen.findByTestId('event-h2')).toHaveTextContent(/Co-host/);
+    expect(screen.getByTestId('cohost-h2')).toBeTruthy();
+    expect(screen.getByTestId('event-h2')).toHaveTextContent(/1 going · 1 maybe/);
+    expect(screen.getByTestId('event-h1')).toHaveTextContent(/Hosting/);
+    expect(screen.queryByTestId('cohost-h1')).toBeNull();
+    // Shown once, as hosted, never also as an invite.
+    expect(screen.queryByTestId('invite-h2')).toBeNull();
+    const order = screen.getAllByTestId(/^(event|invite)-/).map((n) => n.props.testID);
+    expect(order).toEqual(['event-h2', 'event-h1']);
+    await fireEvent.press(screen.getByTestId('event-h2'));
+    expect(router.push).toHaveBeenCalledWith('/events/h2');
+  });
+
+  it('resumes a co-host link that was opened before signing in', async () => {
+    const token = 'AbCdEfGhIjKlMnOpQrStUv';
+    await AsyncStorage.setItem('ci_pending_co_host', JSON.stringify({ token, savedAt: Date.now() }));
+    mockData([], []);
+    await render(<Events />);
+    await screen.findByTestId('events-empty');
+    expect(router.push).toHaveBeenCalledWith(`/c/${token}`);
+    expect(await AsyncStorage.getItem('ci_pending_co_host')).toBeNull();
   });
 });

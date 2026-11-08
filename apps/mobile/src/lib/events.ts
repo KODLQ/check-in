@@ -19,7 +19,18 @@ export function toEventRow(v: EventFormValues) {
 
 /** Maps server-side rule violations (raised by triggers/functions) to i18n error keys. */
 export function errorKey(error: { message?: string } | null | undefined): string {
-  const known = ['start_in_past', 'event_ended', 'event_closed', 'name_required', 'rate_limited'];
+  const known = [
+    'start_in_past',
+    'event_ended',
+    'event_closed',
+    'name_required',
+    'rate_limited',
+    'owner_only',
+    'co_host_limit',
+    'invalid_invite',
+    'already_host',
+    'invalid_cover',
+  ];
   return known.find((k) => error?.message?.includes(k)) ?? 'unknown';
 }
 

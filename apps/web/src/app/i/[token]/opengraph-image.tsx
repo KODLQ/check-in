@@ -2,7 +2,7 @@ import { formatEventTime } from '@check-in/shared';
 import { ImageResponse } from 'next/og';
 
 import { getLocale, makeT } from '@/lib/i18n';
-import { getInvite } from '@/lib/invite';
+import { getInvite, hostedByLine } from '@/lib/invite';
 import { coverUrl, IMAGE_CACHE_CONTROL, themeBackground } from '@/lib/invite-image';
 
 export const alt = 'Event invite';
@@ -61,7 +61,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
         >
           <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05 }}>{e.title.slice(0, 60)}</div>
           <div style={{ fontSize: 38, marginTop: 16, opacity: 0.95 }}>
-            {`${when} · ${t('invite.hosted_by', { name: invite.host.display_name ?? '' })}`}
+            {`${when} · ${hostedByLine(invite, locale, t)}`}
           </div>
         </div>
       </div>

@@ -25,7 +25,13 @@
     "invalid_email": "Enter a valid email address",
     "announcement_required": "Write something first",
     "announcement_too_long": "Max 500 characters",
-    "announcement_limit": "You've posted 5 updates in 24 hours. You can post again {{when}}."
+    "announcement_limit": "You've posted 5 updates in 24 hours. You can post again {{when}}.",
+    "owner_only": "Only the event's owner can do that",
+    "co_host_limit": "This event already has the maximum of 5 co-hosts",
+    "invalid_invite": "This co-host invite is no longer valid",
+    "already_host": "You already host this event",
+    "invalid_cover": "That image can't be used. Pick it again.",
+    "no_access": "You can no longer edit this event"
   },
   "auth": {
     "welcome": "Plan something.",
@@ -88,7 +94,8 @@
     "plan_own_title": "Plan your own in 30 seconds",
     "plan_own_body": "You've got invites — now it's your turn to host.",
     "plan_own_cta": "Plan your own",
-    "dismiss": "Not now"
+    "dismiss": "Not now",
+    "co_host_badge": "Co-host"
   },
   "rsvp": {
     "going": "Going",
@@ -123,7 +130,8 @@
     "open_in_maps": "Open in maps",
     "get_app": "Plan your own with check-in",
     "plan_your_own": "Plan your own in 30 seconds →",
-    "plan_your_own_body": "Get the check-in app. Your replies come with you."
+    "plan_your_own_body": "Get the check-in app. Your replies come with you.",
+    "hosted_by_many": "Hosted by {{name}}"
   },
   "announcements": {
     "title": "Updates from the host",
@@ -225,5 +233,38 @@
     "copy_link": "Copy link",
     "copied": "Link copied",
     "share_text": "You're invited: {{title}}"
+  },
+  "co_hosts": {
+    "title": "Hosts",
+    "owner": "Owner",
+    "co_host": "Co-host",
+    "you": "{{name}} (you)",
+    "invite": "Invite co-host",
+    "invite_hint": "Co-hosts can edit the event, share the invite and manage the guest list. Only you can cancel or delete it. Each link works once and expires after 7 days.",
+    "share_message": "Help me host {{title}} on check-in. Open this link in the app to accept: {{url}}",
+    "pending": "Unused link · expires {{when}}",
+    "revoke": "Revoke",
+    "revoke_confirm_title": "Revoke this link?",
+    "revoke_confirm_body": "Nobody will be able to use it to become a co-host.",
+    "remove": "Remove",
+    "remove_confirm_title": "Remove {{name}} as co-host?",
+    "remove_confirm_body": "They lose access to the event and its guest list right away.",
+    "leave": "Leave as co-host",
+    "leave_confirm_title": "Leave this event?",
+    "leave_confirm_body": "You'll lose access to the event and its guest list, and guests won't see your name as a host anymore.",
+    "no_longer": "You're no longer a co-host of this event.",
+    "accept_title": "{{owner}} invited you to co-host",
+    "accept_disclosure": "Your name ({{name}}) will be shown to guests as a host. You can edit the event, share the invite and manage the guest list.",
+    "accept": "Accept",
+    "not_now": "Not now",
+    "invalid_title": "Invite no longer valid",
+    "invalid_body": "This co-host link has expired, was already used or was revoked. Ask the host for a new one.",
+    "owner_body": "You already host this event, so this link stays unused.",
+    "already_body": "You're already a co-host of this event.",
+    "open_event": "Open event",
+    "web_title": "{{owner}} invited you to co-host {{title}}",
+    "web_body": "Co-hosting happens in the check-in app. Open the link there, or install the app and open this link again.",
+    "web_open_app": "Open in the app",
+    "web_invalid_body": "This co-host link has expired, was already used or was revoked. Ask the host for a new one."
   }
 }

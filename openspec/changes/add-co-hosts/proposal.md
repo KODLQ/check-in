@@ -35,6 +35,9 @@ Parties and meetups are usually organised by two or three friends together, but 
 - `event-rsvp`: Host guest list and Remove guest (owner and co-hosts), Guest list visibility (co-hosts may toggle and see Can't go).
 - `event-invites`: Share from the app and Revoke and regenerate link (owner and co-hosts), Web invite page (shows all host names, owner first).
 - `user-accounts`: Account deletion (co-host membership removed; owned events deleted, including for co-hosts).
+- `event-announcements`: Post announcement and Delete announcement (owner and co-hosts).
+- `my-invites`: Invites listed with hosted events (co-hosted events listed once, as "Co-host", never as an invite).
+- `notifications`: Notification opens the event (host view for co-hosts) and Host reply digest (owner and co-hosts).
 
 ## Impact
 

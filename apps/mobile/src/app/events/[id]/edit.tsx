@@ -1,11 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Alert } from 'react-native';
 
 import { EventForm } from '@/components/event-form';
 import { Screen } from '@/components/ui';
-import { useAuth } from '@/lib/auth';
 import { errorKey, toEventRow } from '@/lib/events';
 import { supabase, type EventRow } from '@/lib/supabase';
 import { pickAndUpload } from '@/lib/upload';
@@ -13,12 +12,20 @@ import { pickAndUpload } from '@/lib/upload';
 export default function EditEvent() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session } = useAuth();
   const [event, setEvent] = useState<EventRow | null>(null);
 
   useEffect(() => {
-    supabase.from('events').select('*').eq('id', id).single().then(({ data }) => setEvent(data));
-  }, [id]);
+    supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (data) setEvent(data);
+        // No row: no longer allowed to manage this event (e.g. removed as co-host).
+        else if (!error) Alert.alert(t('co_hosts.no_longer'), undefined, [{ text: 'OK', onPress: () => router.back() }]);
+      });
+  }, [id, t]);
 
   if (!event) {
     return (
@@ -48,10 +55,11 @@ export default function EditEvent() {
         coverPath: event.cover_path,
         guestListVisible: event.guest_list_visible,
       }}
-      onPickCover={() => pickAndUpload('covers', session!.user.id, [16, 9])}
+      onPickCover={() => pickAndUpload('covers', `e/${id}`, [16, 9])}
       onSubmit={async (values) => {
-        const { error } = await supabase.from('events').update(toEventRow(values)).eq('id', id);
+        const { data, error } = await supabase.from('events').update(toEventRow(values)).eq('id', id).select('id');
         if (error) return errorKey(error);
+        if (!data?.length) return 'no_access';
         router.back();
       }}
     />

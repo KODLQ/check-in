@@ -1,4 +1,4 @@
-import { formatTimeRange, inviteUrl, type RsvpStatus } from '@check-in/shared';
+import { formatHostNames, formatTimeRange, hostedByKey, inviteUrl, type RsvpStatus } from '@check-in/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
@@ -28,6 +28,7 @@ interface Invite {
     theme?: string;
   };
   host?: { display_name: string | null };
+  co_hosts?: { display_name: string | null }[];
   counts?: { going: number; maybe: number };
   my_rsvp?: { status: RsvpStatus } | null;
   announcements?: AnnouncementItem[];
@@ -85,7 +86,9 @@ export default function InviteInApp() {
     <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ backgroundColor: c.bg }} contentContainerStyle={{ padding: 20, gap: 14 }}>
       <Cover coverPath={e.cover_path} theme={e.theme} height={200} />
       <Title>{e.title}</Title>
-      <Body muted>{t('invite.hosted_by', { name: invite.host?.display_name ?? '' })}</Body>
+      <Body muted>{t(`invite.${hostedByKey(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name))}`, {
+          name: formatHostNames(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name), locale),
+        })}</Body>
       <Body>{formatTimeRange(new Date(e.starts_at), e.ends_at ? new Date(e.ends_at) : null, locale, e.time_zone)}</Body>
       <Body>📍 {e.location_text}</Body>
       {e.description ? <Body muted>{e.description}</Body> : null}

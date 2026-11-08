@@ -20,7 +20,9 @@ import {
 
 import { Cover } from '@/components/cover';
 import { Body, Button, Card, useColors } from '@/components/ui';
+import { useAuth } from '@/lib/auth';
 import { locale } from '@/lib/i18n';
+import { consumePendingCoHostInvite } from '@/lib/pending-co-host';
 import { onInvitesClaimed } from '@/lib/pending-claim';
 import { supabase, type EventRow } from '@/lib/supabase';
 
@@ -83,6 +85,8 @@ function Badge({ label, testID }: { label: string; testID?: string }) {
 export default function Events() {
   const { t } = useTranslation();
   const c = useColors();
+  const { session } = useAuth();
+  const userId = session?.user.id;
   const [hosted, setHosted] = useState<HostedEvent[] | null>(null);
   const [invites, setInvites] = useState<MyInvite[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -100,6 +104,10 @@ export default function Events() {
   useFocusEffect(
     useCallback(() => {
       void load();
+      // A co-host link opened before signing in / onboarding continues here (everyone lands on home).
+      void consumePendingCoHostInvite().then((token) => {
+        if (token) router.push(`/c/${token}`);
+      });
     }, [load]),
   );
   // Web RSVPs claimed while this screen is open.
@@ -155,7 +163,14 @@ export default function Events() {
           style={{ opacity: item.past || item.cancelled ? 0.6 : 1 }}
         >
           <View style={{ position: 'absolute', top: 12, left: 12, flexDirection: 'row', gap: 6 }}>
-            <Badge label={item.kind === 'hosted' ? t('events.hosting') : t('events.invited')} />
+            {item.kind === 'invite' ? (
+              <Badge label={t('events.invited')} />
+            ) : item.event.host_id === userId ? (
+              <Badge label={t('events.hosting')} />
+            ) : (
+              // Hosted list = events RLS lets you manage: your own plus those you co-host.
+              <Badge testID={`cohost-${item.id}`} label={t('events.co_host_badge')} />
+            )}
             {item.cancelled ? (
               <Badge testID={`cancelled-${item.id}`} label={t('events.cancelled')} />
             ) : null}

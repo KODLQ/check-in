@@ -25,7 +25,13 @@
     "invalid_email": "Skriv en giltig mejladress",
     "announcement_required": "Skriv något först",
     "announcement_too_long": "Max 500 tecken",
-    "announcement_limit": "Du har postat 5 uppdateringar på 24 timmar. Du kan posta igen {{when}}."
+    "announcement_limit": "Du har postat 5 uppdateringar på 24 timmar. Du kan posta igen {{when}}.",
+    "owner_only": "Bara eventets ägare kan göra det",
+    "co_host_limit": "Eventet har redan max 5 medvärdar",
+    "invalid_invite": "Den här medvärdsinbjudan gäller inte längre",
+    "already_host": "Du är redan värd för eventet",
+    "invalid_cover": "Bilden kan inte användas. Välj den igen.",
+    "no_access": "Du kan inte längre redigera det här eventet"
   },
   "auth": {
     "welcome": "Hitta på något.",
@@ -88,7 +94,8 @@
     "plan_own_title": "Planera ditt eget på 30 sekunder",
     "plan_own_body": "Du har fått inbjudningar — nu är det din tur att bjuda.",
     "plan_own_cta": "Planera ditt eget",
-    "dismiss": "Inte nu"
+    "dismiss": "Inte nu",
+    "co_host_badge": "Medvärd"
   },
   "rsvp": {
     "going": "Kommer",
@@ -123,7 +130,8 @@
     "open_in_maps": "Öppna i kartor",
     "get_app": "Planera ditt eget med check-in",
     "plan_your_own": "Planera ditt eget på 30 sekunder →",
-    "plan_your_own_body": "Skaffa check-in-appen. Dina svar följer med."
+    "plan_your_own_body": "Skaffa check-in-appen. Dina svar följer med.",
+    "hosted_by_many": "Värdar: {{name}}"
   },
   "announcements": {
     "title": "Uppdateringar från värden",
@@ -225,5 +233,38 @@
     "copy_link": "Kopiera länk",
     "copied": "Länken är kopierad",
     "share_text": "Du är bjuden: {{title}}"
+  },
+  "co_hosts": {
+    "title": "Värdar",
+    "owner": "Ägare",
+    "co_host": "Medvärd",
+    "you": "{{name}} (du)",
+    "invite": "Bjud in medvärd",
+    "invite_hint": "Medvärdar kan redigera eventet, dela inbjudan och hantera gästlistan. Bara du kan ställa in eller radera det. Varje länk fungerar en gång och gäller i 7 dagar.",
+    "share_message": "Hjälp mig att vara värd för {{title}} på check-in. Öppna länken i appen för att tacka ja: {{url}}",
+    "pending": "Oanvänd länk · gäller till {{when}}",
+    "revoke": "Återkalla",
+    "revoke_confirm_title": "Återkalla länken?",
+    "revoke_confirm_body": "Ingen kan längre bli medvärd med den.",
+    "remove": "Ta bort",
+    "remove_confirm_title": "Ta bort {{name}} som medvärd?",
+    "remove_confirm_body": "De förlorar direkt åtkomsten till eventet och gästlistan.",
+    "leave": "Lämna som medvärd",
+    "leave_confirm_title": "Lämna eventet?",
+    "leave_confirm_body": "Du förlorar åtkomsten till eventet och gästlistan, och gästerna ser inte längre ditt namn som värd.",
+    "no_longer": "Du är inte längre medvärd för det här eventet.",
+    "accept_title": "{{owner}} vill att du blir medvärd",
+    "accept_disclosure": "Ditt namn ({{name}}) visas för gästerna som värd. Du kan redigera eventet, dela inbjudan och hantera gästlistan.",
+    "accept": "Tacka ja",
+    "not_now": "Inte nu",
+    "invalid_title": "Inbjudan gäller inte längre",
+    "invalid_body": "Medvärdslänken har gått ut, redan använts eller återkallats. Be värden om en ny.",
+    "owner_body": "Du är redan värd för eventet, så länken förblir oanvänd.",
+    "already_body": "Du är redan medvärd för det här eventet.",
+    "open_event": "Öppna eventet",
+    "web_title": "{{owner}} vill att du blir medvärd för {{title}}",
+    "web_body": "Medvärdskap sköts i check-in-appen. Öppna länken där, eller installera appen och öppna länken igen.",
+    "web_open_app": "Öppna i appen",
+    "web_invalid_body": "Medvärdslänken har gått ut, redan använts eller återkallats. Be värden om en ny."
   }
 }

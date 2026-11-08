@@ -23,7 +23,33 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "event_announcements": {
+            "co_host_invites": {
+                  Row: {
+                    "accepted_at": string | null,"accepted_by": string | null,"created_at": string,"event_id": string,"expires_at": string,"revoked_at": string | null,"token": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted_at"?: string | null,"accepted_by"?: string | null,"created_at"?: string,"event_id": string,"expires_at"?: string,"revoked_at"?: string | null,"token"?: string
+                  }
+                  Update: {
+                    "accepted_at"?: string | null,"accepted_by"?: string | null,"created_at"?: string,"event_id"?: string,"expires_at"?: string,"revoked_at"?: string | null,"token"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "co_host_invites_accepted_by_fkey"
+      columns: ["accepted_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "co_host_invites_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"event_announcements": {
                   Row: {
                     "author_id": string | null,"body": string | null,"created_at": string,"deleted_at": string | null,"event_id": string,"id": string
                   }
@@ -46,6 +72,32 @@ isOneToOne: false
       columns: ["event_id"]
 isOneToOne: false
       referencedRelation: "events"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"event_co_hosts": {
+                  Row: {
+                    "added_at": string,"event_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "added_at"?: string,"event_id": string,"user_id": string
+                  }
+                  Update: {
+                    "added_at"?: string,"event_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "event_co_hosts_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "event_co_hosts_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -301,7 +353,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "apply_quiet_hours":
+            "accept_co_host_invite":
+{ Args: { "p_token": string }; Returns: string
+                           },
+"apply_quiet_hours":
 { Args: { "p_ts": string,"p_urgent": boolean }; Returns: string
                            },
 "cancel_event_notifications":
@@ -313,11 +368,17 @@ isOneToOne: false
 "claim_guest_rsvps":
 { Args: { "p_ticket": string }; Returns: Json
                            },
+"co_host_slots_used":
+{ Args: { "p_event_id": string,"p_now"?: string }; Returns: number
+                           },
 "complete_delivery":
 { Args: { "p_error"?: string,"p_id": string,"p_now"?: string,"p_outcome": string,"p_provider_id"?: string }; Returns: string
                            },
 "create_claim_ticket":
 { Args: { "p_guest_token": string }; Returns: string
+                           },
+"create_co_host_invite":
+{ Args: { "p_event_id": string }; Returns: string
                            },
 "delete_announcement":
 { Args: { "p_id": string }; Returns: undefined
@@ -348,6 +409,15 @@ isOneToOne: false
 "generate_invite_token":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"generate_random_token":
+{ Args: { "p_length": number }; Returns: string
+                           },
+"get_co_host_invite":
+{ Args: { "p_token": string }; Returns: Json
+                           },
+"get_co_host_invite_preview":
+{ Args: { "p_token": string }; Returns: Json
+                           },
 "get_invite":
 { Args: { "p_guest_token"?: string,"p_token": string }; Returns: Json
                            },
@@ -366,6 +436,9 @@ isOneToOne: false
 "invite_payload":
 { Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"me": Omit<Database["public"]['Tables']["rsvps"]['Row'], Database["public"]['Tables']["rsvps"]['ComputedFields']>,"p_guest_device"?: boolean }; Returns: Json
                            },
+"is_event_co_host":
+{ Args: { "p_event_id": string }; Returns: boolean
+                           },
 "is_event_host":
 { Args: { "p_event_id": string }; Returns: boolean
                            },
@@ -375,8 +448,19 @@ isOneToOne: false
 "is_event_manager_for":
 { Args: { "p_event_id": string,"p_user_id": string }; Returns: boolean
                            },
+"is_event_owner":
+{ Args: { "p_event_id": string }; Returns: boolean
+                           },
 "kick_notifications_worker":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"leave_event":
+{ Args: { "p_event_id": string }; Returns: boolean
+                           },
+"list_event_hosts":
+{ Args: { "p_event_id": string }; Returns: {
+              "added_at": string,"avatar_path": string,"display_name": string,"role": string,"user_id": string
+            }[]
                            },
 "list_my_invites":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -385,6 +469,9 @@ isOneToOne: false
 { Args: { "p_email": string }; Returns: string
                            },
 "max_announcements_per_day":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"max_co_hosts":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "max_rsvps_per_event":
@@ -404,6 +491,22 @@ isOneToOne: false
 "notification_stale_reason":
 { Args: { "n": Omit<Database["public"]['Tables']["notifications"]['Row'], Database["public"]['Tables']["notifications"]['ComputedFields']>,"p_now": string }; Returns: string
                            },
+"open_co_host_invite":
+{ Args: { "p_lock"?: boolean,"p_token": string }; Returns: {
+              "accepted_at": string | null,
+"accepted_by": string | null,
+"created_at": string,
+"event_id": string,
+"expires_at": string,
+"revoked_at": string | null,
+"token": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "co_host_invites"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "open_event_for_token":
 { Args: { "p_token": string }; Returns: {
               "cancelled_at": string | null,
@@ -447,6 +550,12 @@ isOneToOne: false
 "register_push_token":
 { Args: { "p_locale"?: string,"p_platform": string,"p_token": string }; Returns: undefined
                            },
+"remove_co_host":
+{ Args: { "p_event_id": string,"p_user_id": string }; Returns: boolean
+                           },
+"revoke_co_host_invite":
+{ Args: { "p_token": string }; Returns: undefined
+                           },
 "rsvp_as_user":
 { Args: { "p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
                            },
@@ -458,6 +567,9 @@ isOneToOne: false
                            },
 "set_my_rsvp":
 { Args: { "p_event_id": string,"p_status": Database["public"]['Enums']["rsvp_status"] }; Returns: Json
+                           },
+"try_uuid":
+{ Args: { "p_text": string }; Returns: string
                            },
 "unregister_push_token":
 { Args: { "p_token": string }; Returns: boolean

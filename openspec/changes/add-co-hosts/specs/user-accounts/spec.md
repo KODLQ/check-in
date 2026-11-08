@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Account deletion
-The system SHALL let a signed-in host delete their account. Deleting an account SHALL delete their profile, the events they own, and all RSVPs to those events, for everyone including those events' co-hosts. For events the person only co-hosts, it SHALL remove only their co-host membership; those events and their RSVPs SHALL remain.
+The system SHALL let a signed-in host delete their account. Deleting an account SHALL delete their profile, the events they own, and all RSVPs to those events, for everyone including those events' co-hosts. It SHALL also delete every RSVP the account made or claimed on other people's events. For events the person only co-hosts, it SHALL remove only their co-host membership; those events and their RSVPs SHALL remain.
 
 #### Scenario: Host deletes account
 - **WHEN** a host confirms account deletion
@@ -12,6 +12,10 @@ The system SHALL let a signed-in host delete their account. Deleting an account 
 #### Scenario: Invite link after host deletion
 - **WHEN** a guest opens an invite link to an event whose host deleted their account
 - **THEN** the page shows that the event no longer exists and reveals no event details
+
+#### Scenario: Claimed responses removed with account
+- **WHEN** a user who claimed web responses deletes their account
+- **THEN** those responses are removed from the hosts' guest lists
 
 #### Scenario: Co-host deletes account
 - **WHEN** a person who co-hosts Anna's event deletes their account

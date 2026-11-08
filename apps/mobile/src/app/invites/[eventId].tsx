@@ -1,4 +1,4 @@
-import { formatTimeRange, type RsvpStatus } from '@check-in/shared';
+import { formatHostNames, formatTimeRange, hostedByKey, type RsvpStatus } from '@check-in/shared';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +31,7 @@ interface MyInviteDetail {
     theme?: string;
   };
   host?: { display_name: string | null };
+  co_hosts?: { display_name: string | null }[];
   counts?: { going: number; maybe: number };
   guests?: { display_name: string; status: RsvpStatus }[] | null;
   my_rsvp?: { status: RsvpStatus; display_name: string } | null;
@@ -118,7 +119,9 @@ export default function MyInviteScreen() {
     >
       <Cover coverPath={e.cover_path} theme={e.theme} height={200} />
       <Title>{e.title}</Title>
-      <Body muted>{t('invite.hosted_by', { name: invite.host?.display_name ?? '' })}</Body>
+      <Body muted>{t(`invite.${hostedByKey(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name))}`, {
+          name: formatHostNames(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name), locale),
+        })}</Body>
       <Body>
         {formatTimeRange(
           new Date(e.starts_at),

@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import { googleCalendarUrl } from '@/lib/calendar';
 import { env } from '@/lib/env';
 import { clientStrings, getLocale, makeT } from '@/lib/i18n';
-import { getInvite, GUEST_COOKIE } from '@/lib/invite';
+import { getInvite, GUEST_COOKIE, hostedByLine } from '@/lib/invite';
 import { avatarUrl, coverUrl } from '@/lib/supabase';
 import { RsvpForm } from './rsvp-form';
 import { ShareInvite } from './share-invite';
@@ -29,9 +29,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const e = invite.event;
   const when = formatEventTime(new Date(e.starts_at), locale, e.time_zone);
-  const host = invite.host.display_name ?? '';
   // Deliberately excludes the address and the guest list (spec: rich link previews).
-  const description = `${when} · ${t('invite.hosted_by', { name: host })}`;
+  const description = `${when} · ${hostedByLine(invite, locale, t)}`;
   return {
     title: e.title,
     description,
@@ -84,7 +83,7 @@ export default async function InvitePage({ params }: Props) {
       <h1>{e.title}</h1>
       <div className="host">
         {avatar ? <img className="avatar" src={avatar} alt="" /> : null}
-        <span className="muted">{t('invite.hosted_by', { name: invite.host.display_name ?? '' })}</span>
+        <span className="muted" data-testid="hosted-by">{hostedByLine(invite, locale, t)}</span>
       </div>
 
       <div className="meta">

@@ -4,5 +4,6 @@ export * from './dates';
 export * from './themes';
 export * from './invite';
 export * from './home';
+export * from './hosts';
 export * from './i18n';
 export type { Database } from './database.types';
