@@ -33,7 +33,7 @@
 
 - [x] 4.1 Create-event screen: title, start time, location (required), optional end/description; Zod validation incl. "start in the past"; Jest tests for validation scenarios
 - [x] 4.2 Location search with optional map point (place name + coordinates) and free-text fallback; verify both paths save correctly
-- [ ] 4.3 Cover picker: built-in themes, image upload to `covers`, default theme; verify the uploaded image appears on the event screen
+- [x] 4.3 Cover picker: built-in themes, image upload to `covers`, default theme; verify the uploaded image appears on the event screen
 - [x] 4.4 After creation, show the invite link with Share (native share sheet) and Copy; verify on the simulator. Measure that a minimal event can be created in < 30 s
 - [x] 4.5 Event list (upcoming first, then past) with Going/Maybe counts; verify against seed data
 - [x] 4.6 Edit event (sets `time_changed_at` when time changes) and cancel event; verify via the invite page that changes and cancellation show up
