@@ -1,0 +1,4 @@
+openspec/
+.claude/
+supabase/migrations/
+**/database.types.ts

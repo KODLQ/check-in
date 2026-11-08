@@ -1,0 +1,23 @@
+node_modules/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+# Expo
+.expo/
+dist/
+web-build/
+ios/
+android/
+# Next
+.next/
+out/
+next-env.d.ts
+# Supabase
+supabase/.branches
+supabase/.temp
+# Playwright
+test-results/
+playwright-report/
+*.tsbuildinfo

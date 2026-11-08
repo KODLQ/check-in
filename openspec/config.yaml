@@ -1,0 +1,39 @@
+schema: spec-driven
+
+# Project context: constraints an agent cannot infer from the code.
+context: |
+  Product: "check-in" - a mobile-first app for private events (invites/RSVP) and
+  discovering public events in your city, with opt-in check-ins visible to friends.
+  Target users: Gen Z / young adults who live in Instagram, Snapchat, TikTok,
+  iMessage and WhatsApp - not Facebook.
+
+  Strategy constraints:
+  - Private events are the growth wedge. Creating an event must take < 30 seconds.
+  - Guests must be able to view an invite and RSVP from a web link WITHOUT
+    installing the app or creating an account. Never gate RSVP behind a download.
+  - Invite links must render rich previews (Open Graph image/title) in
+    iMessage, WhatsApp, Snapchat, Instagram DMs and Discord.
+  - Public events launch in Stockholm only; content is seeded/imported by us,
+    not expected to come from users at first.
+  - Check-ins / location sharing are opt-in, friends-only, time-limited, and
+    only for public events. Prefer "friends going" over live location.
+
+  Platform & stack:
+  - Expo (React Native, TypeScript) for iOS, Android and web (web hosts invite pages).
+  - Supabase backend: Postgres + PostGIS, Auth, Row Level Security, Realtime,
+    Storage, Edge Functions. Hosted in the EU (Stockholm, eu-north-1).
+  - All data access rules enforced with RLS, not only in the client.
+
+  Legal / locale:
+  - GDPR applies. Minimize personal data, document lawful basis for location
+    and contact data, support data export and account deletion.
+  - UI languages: Swedish and English. Times in Europe/Stockholm by default.
+
+rules:
+  proposal:
+    - Always state what is explicitly out of scope
+  design:
+    - Describe RLS policies for every new table
+    - Call out any personal data stored and its retention
+  tasks:
+    - Break tasks into chunks of at most ~2 hours
