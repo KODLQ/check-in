@@ -26,6 +26,7 @@ export default function SignIn() {
       await fn();
     } catch (e) {
       const code = (e as { code?: string }).code;
+      if (__DEV__) console.warn('sign-in failed', e);
       if (code !== 'ERR_REQUEST_CANCELED') setError(t('common.error'));
     } finally {
       setBusy(false);

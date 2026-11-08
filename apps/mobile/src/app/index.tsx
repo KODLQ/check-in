@@ -2,7 +2,7 @@ import { formatEventTime, hasEventEnded } from '@check-in/shared';
 import { Link, router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, SectionList, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, SectionList, Text, View } from 'react-native';
 
 import { Cover } from '@/components/cover';
 import { Body, Button, useColors } from '@/components/ui';
@@ -37,8 +37,8 @@ export default function MyEvents() {
   const past = (events ?? []).filter(ended).reverse();
   const sections = [
     { title: t('events.upcoming'), data: upcoming },
-    ...(past.length ? [{ title: t('events.past'), data: past }] : []),
-  ];
+    { title: t('events.past'), data: past },
+  ].filter((s) => s.data.length > 0);
 
   return (
     <>
@@ -54,6 +54,7 @@ export default function MyEvents() {
         }}
       />
       <SectionList
+        contentInsetAdjustmentBehavior="automatic"
         style={{ backgroundColor: c.bg }}
         contentContainerStyle={{ padding: 20, gap: 14, paddingBottom: 120 }}
         sections={sections}
@@ -73,8 +74,16 @@ export default function MyEvents() {
             {section.title}
           </Text>
         )}
-        renderSectionFooter={({ section }) =>
-          section.data.length === 0 && events ? <Body muted>{t('events.empty')}</Body> : null
+        ListEmptyComponent={
+          events ? (
+            <View testID="events-empty" style={{ paddingTop: 40 }}>
+              <Body muted center>
+                {t('events.empty')}
+              </Body>
+            </View>
+          ) : (
+            <ActivityIndicator style={{ paddingTop: 40 }} />
+          )
         }
         renderItem={({ item }) => {
           const going = item.rsvps.filter((r) => r.status === 'going').length;

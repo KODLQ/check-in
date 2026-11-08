@@ -22,22 +22,22 @@
 
 ## 3. Host accounts (mobile)
 
-- [ ] 3.1 Supabase client + session persistence in `apps/mobile`; verify the session survives an app restart
-- [ ] 3.2 Email magic-link sign-in with deep-link redirect and an expired-link error state; verify end-to-end against local Supabase (Inbucket)
+- [x] 3.1 Supabase client + session persistence in `apps/mobile`; verify the session survives an app restart
+- [x] 3.2 Email magic-link sign-in with deep-link redirect and an expired-link error state; verify end-to-end against local Supabase (Inbucket)
 - [ ] 3.3 Sign in with Apple and Google (dev configs); verify Apple sign-in on the iOS Simulator
 - [x] 3.4 First-run display-name screen + optional avatar upload; Jest test that event creation is blocked without a name
-- [ ] 3.5 Account deletion flow (confirm dialog → edge function deleting user and cascading data); pgTAP/integration test proves events and RSVPs are gone
-- [ ] 3.6 i18n wiring with `expo-localization` (sv/en, en fallback); verify the UI switches when the simulator language is Swedish
+- [x] 3.5 Account deletion flow (confirm dialog → edge function deleting user and cascading data); pgTAP/integration test proves events and RSVPs are gone
+- [x] 3.6 i18n wiring with `expo-localization` (sv/en, en fallback); verify the UI switches when the simulator language is Swedish
 
 ## 4. Private events (mobile)
 
 - [x] 4.1 Create-event screen: title, start time, location (required), optional end/description; Zod validation incl. "start in the past"; Jest tests for validation scenarios
-- [ ] 4.2 Location search with optional map point (place name + coordinates) and free-text fallback; verify both paths save correctly
+- [x] 4.2 Location search with optional map point (place name + coordinates) and free-text fallback; verify both paths save correctly
 - [ ] 4.3 Cover picker: built-in themes, image upload to `covers`, default theme; verify the uploaded image appears on the event screen
-- [ ] 4.4 After creation, show the invite link with Share (native share sheet) and Copy; verify on the simulator. Measure that a minimal event can be created in < 30 s
-- [ ] 4.5 Event list (upcoming first, then past) with Going/Maybe counts; verify against seed data
-- [ ] 4.6 Edit event (sets `time_changed_at` when time changes) and cancel event; verify via the invite page that changes and cancellation show up
-- [ ] 4.7 Guest list screen grouped by status with Realtime updates, remove-guest action, guest-list visibility toggle, regenerate link; verify a web RSVP appears live within seconds
+- [x] 4.4 After creation, show the invite link with Share (native share sheet) and Copy; verify on the simulator. Measure that a minimal event can be created in < 30 s
+- [x] 4.5 Event list (upcoming first, then past) with Going/Maybe counts; verify against seed data
+- [x] 4.6 Edit event (sets `time_changed_at` when time changes) and cancel event; verify via the invite page that changes and cancellation show up
+- [x] 4.7 Guest list screen grouped by status with Realtime updates, remove-guest action, guest-list visibility toggle, regenerate link; verify a web RSVP appears live within seconds
 
 ## 5. Invite page and RSVP (web)
 

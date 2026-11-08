@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { searchPlaces, type Place } from '@/lib/places';
+import { locationTextFor, searchPlaces, type Place } from '@/lib/places';
 import { Field, useColors } from './ui';
 
 export interface LocationValue {
@@ -36,7 +36,11 @@ export function LocationField({
     const timer = setTimeout(() => {
       abort.current?.abort();
       abort.current = new AbortController();
-      searchPlaces(value.locationText, abort.current.signal).then(setResults).catch(() => {});
+      searchPlaces(value.locationText, abort.current.signal)
+        .then(setResults)
+        .catch((e: unknown) => {
+          if (__DEV__ && (e as Error).name !== 'AbortError') console.warn('place search failed', e);
+        });
     }, 300);
     return () => clearTimeout(timer);
   }, [value.locationText, focused, hasPoint]);
@@ -62,7 +66,7 @@ export function LocationField({
               key={`${p.latitude},${p.longitude},${i}`}
               onPress={() => {
                 onChange({
-                  locationText: [p.name, p.label].filter(Boolean).join(', '),
+                  locationText: locationTextFor(value.locationText, p),
                   placeName: p.name,
                   latitude: p.latitude,
                   longitude: p.longitude,

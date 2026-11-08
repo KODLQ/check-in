@@ -138,8 +138,8 @@ export default function EventDetail() {
             : undefined,
         }}
       />
-      <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 60 }}>
-        {created ? (
+      <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ backgroundColor: c.bg }} contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 60 }}>
+        {created && editable ? (
           <Card style={{ backgroundColor: c.accent }}>
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>{t('events.created')}</Text>
           </Card>

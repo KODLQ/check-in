@@ -76,6 +76,7 @@ export function EventForm({
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
         style={{ backgroundColor: c.bg }}
         contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 60 }}
         keyboardShouldPersistTaps="handled"

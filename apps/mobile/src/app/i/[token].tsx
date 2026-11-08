@@ -76,7 +76,7 @@ export default function InviteInApp() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={{ padding: 20, gap: 14 }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ backgroundColor: c.bg }} contentContainerStyle={{ padding: 20, gap: 14 }}>
       <Cover coverPath={e.cover_path} theme={e.theme} height={200} />
       <Title>{e.title}</Title>
       <Body muted>{t('invite.hosted_by', { name: invite.host?.display_name ?? '' })}</Body>
