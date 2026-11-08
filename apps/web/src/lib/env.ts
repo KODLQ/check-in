@@ -16,4 +16,7 @@ export const env = {
   rateLimitSalt: process.env.RATE_LIMIT_SALT ?? 'dev-only-salt',
   /** Email opt-in on the RSVP form. Off until a DNS-verified sending domain exists (design: migration plan). */
   emailUpdatesEnabled: process.env.NEXT_PUBLIC_EMAIL_UPDATES === 'true',
+  /** Store listings for the app (placeholders until the listings exist). */
+  appStoreUrl: process.env.NEXT_PUBLIC_APP_STORE_URL || 'https://apps.apple.com/app/check-in',
+  playStoreUrl: process.env.NEXT_PUBLIC_PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=se.checkin.app',
 };

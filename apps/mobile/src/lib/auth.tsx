@@ -1,7 +1,11 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
+import { Toast } from '@/components/toast';
+
+import { accessArea } from './access';
 import { supabase, type ProfileRow } from './supabase';
+import { usePendingClaim } from './use-pending-claim';
 
 interface AuthState {
   session: Session | null;
@@ -50,9 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [loadProfile, session?.user.id],
   );
 
+  // Web RSVPs handed over through checkin://claim are linked once the user reaches the app area.
+  const claim = usePendingClaim(loading ? null : accessArea(!!session, profile));
+
   return (
     <AuthContext.Provider value={{ session, profile, loading, refreshProfile }}>
       {children}
+      <Toast message={claim.message} onHide={claim.dismiss} />
     </AuthContext.Provider>
   );
 }

@@ -79,7 +79,16 @@
     "maybe_count": "{{count}} maybe",
     "regenerate_link": "Reset invite link",
     "regenerate_confirm_body": "The current link will stop working. People who already replied stay on the list.",
-    "show_guest_list": "Guests can see who's coming"
+    "show_guest_list": "Guests can see who's coming",
+    "title": "Events",
+    "hosting": "Hosting",
+    "invited": "Invite",
+    "past_badge": "Past",
+    "hosted_by_answer": "Hosted by {{name}} · Your answer: {{status}}",
+    "plan_own_title": "Plan your own in 30 seconds",
+    "plan_own_body": "You've got invites — now it's your turn to host.",
+    "plan_own_cta": "Plan your own",
+    "dismiss": "Not now"
   },
   "rsvp": {
     "going": "Going",
@@ -112,7 +121,9 @@
     "time_updated": "Time updated",
     "add_to_calendar": "Add to calendar",
     "open_in_maps": "Open in maps",
-    "get_app": "Plan your own with check-in"
+    "get_app": "Plan your own with check-in",
+    "plan_your_own": "Plan your own in 30 seconds →",
+    "plan_your_own_body": "Get the check-in app. Your replies come with you."
   },
   "announcements": {
     "title": "Updates from the host",
@@ -175,5 +186,28 @@
       "footer": "You get this email because you asked for updates about this event.",
       "unsubscribe": "Unsubscribe"
     }
+  },
+  "invites": {
+    "closed_cancelled": "This event has been cancelled. Answers can no longer be changed.",
+    "closed_past": "This event has already happened.",
+    "withdraw_confirm_title": "Remove your reply?",
+    "withdraw_confirm_body": "The host will no longer see you on the guest list, and the event disappears from your list."
+  },
+  "claim": {
+    "added_one": "1 invite added to your events",
+    "added_other": "{{count}} invites added to your events",
+    "none": "No new invites to add",
+    "expired": "That link expired — open the invite page again"
+  },
+  "get_app": {
+    "title": "Get check-in",
+    "body": "Plan your own event in 30 seconds. Your invites come with you into the app.",
+    "open_app": "Open the app",
+    "app_store": "Download on the App Store",
+    "play_store": "Get it on Google Play",
+    "come_back": "Installed the app? Come back here and tap Open the app.",
+    "in_app_browser": "This in-app browser can't open check-in. Tap ⋯ and choose Open in Safari or Open in browser, then tap Open the app.",
+    "desktop": "Get check-in on your phone.",
+    "back": "Back to the invite"
   }
 }

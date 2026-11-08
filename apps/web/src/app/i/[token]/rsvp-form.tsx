@@ -33,7 +33,10 @@ function safeStorage(): Storage | null {
 /** Random 128-bit device token, base64url (22 chars). Only its hash is stored server-side. */
 function newGuestToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 function getGuestToken(): string {
@@ -42,6 +45,45 @@ function getGuestToken(): string {
   writeCookie(token);
   safeStorage()?.setItem(STORAGE_KEY, token);
   return token;
+}
+
+/**
+ * Post-RSVP "Plan your own" prompt. Creates a claim ticket for this browser's RSVPs (guest token in the
+ * POST body) and opens the hand-off page with the ticket in the URL fragment, which browsers never
+ * send to a server or in a Referer header.
+ */
+function PlanYourOwn({ strings }: { strings: ClientStrings }) {
+  const [busy, setBusy] = useState(false);
+
+  async function go() {
+    setBusy(true);
+    let hash = '';
+    try {
+      const res = await fetch('/api/claim-ticket', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ guestToken: getGuestToken() }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { ticket?: string };
+      if (res.ok && body.ticket) hash = `#t=${body.ticket}`;
+    } catch {
+      // Without a ticket the hand-off page still shows the store links.
+    }
+    window.location.assign(`/get-app${hash}`);
+  }
+
+  return (
+    <button
+      type="button"
+      className="card plan-own"
+      data-testid="plan-your-own"
+      disabled={busy}
+      onClick={go}
+    >
+      <strong>{strings.planYourOwn}</strong>
+      <span className="muted">{strings.planYourOwnBody}</span>
+    </button>
+  );
 }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -96,7 +138,9 @@ export function RsvpForm({
       return;
     }
     const typed = email.trim();
-    const optIn = emailChange === 'form' || (emailChange === undefined && !current && emailUpdates && typed !== '');
+    const optIn =
+      emailChange === 'form' ||
+      (emailChange === undefined && !current && emailUpdates && typed !== '');
     if (optIn) {
       if (!EMAIL_RE.test(typed)) {
         setEmailError(strings.invalidEmail);
@@ -117,7 +161,13 @@ export function RsvpForm({
       const res = await fetch('/api/rsvp', {
         method,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token, guestToken: getGuestToken(), displayName: name, status, ...emailBody }),
+        body: JSON.stringify({
+          token,
+          guestToken: getGuestToken(),
+          displayName: name,
+          status,
+          ...emailBody,
+        }),
       });
       const body = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -184,76 +234,99 @@ export function RsvpForm({
   );
 
   return (
-    <section className="card" aria-label="RSVP">
-      {current ? (
-        <p style={{ margin: 0 }} data-testid="my-answer">
-          {strings.yourAnswer.replace('{{status}}', strings[current.status])}
-        </p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label htmlFor="rsvp-name">{strings.nameLabel}</label>
-          <input
-            id="rsvp-name"
-            type="text"
-            value={name}
-            maxLength={50}
-            autoComplete="given-name"
-            placeholder={strings.namePlaceholder}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-      )}
-      {emailUpdates && !current ? emailFields : null}
-      <div className="choices">
-        {STATUSES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            className="btn"
-            aria-pressed={current?.status === s}
-            disabled={disabled}
-            onClick={() => send('POST', s)}
-          >
-            {strings[s]}
-          </button>
-        ))}
-      </div>
-      {error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {notice ? (
-        <p className="muted" role="status" data-testid="email-notice" style={{ margin: 0 }}>
-          {notice}
-        </p>
-      ) : null}
-      {current && emailUpdates ? (
-        subscribed ? (
-          <p className="muted" style={{ margin: 0 }} data-testid="email-status">
-            {strings.emailOn.replace('{{email}}', current.email_updates?.masked ?? '')} ·{' '}
-            <button type="button" className="link-btn" disabled={disabled} onClick={() => send('POST', current.status, null)}>
-              {strings.emailTurnOff}
-            </button>
+    <>
+      <section className="card" aria-label="RSVP">
+        {current ? (
+          <p style={{ margin: 0 }} data-testid="my-answer">
+            {strings.yourAnswer.replace('{{status}}', strings[current.status])}
           </p>
-        ) : showEmail ? (
-          <>
-            {emailFields}
-            <button type="button" className="btn" disabled={disabled} onClick={() => send('POST', current.status, 'form')}>
-              {strings.emailSave}
-            </button>
-          </>
         ) : (
-          <button type="button" className="link-btn" disabled={disabled} onClick={() => setShowEmail(true)}>
-            {strings.emailAdd}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label htmlFor="rsvp-name">{strings.nameLabel}</label>
+            <input
+              id="rsvp-name"
+              type="text"
+              value={name}
+              maxLength={50}
+              autoComplete="given-name"
+              placeholder={strings.namePlaceholder}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+        )}
+        {emailUpdates && !current ? emailFields : null}
+        <div className="choices">
+          {STATUSES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              className="btn"
+              aria-pressed={current?.status === s}
+              disabled={disabled}
+              onClick={() => send('POST', s)}
+            >
+              {strings[s]}
+            </button>
+          ))}
+        </div>
+        {error ? (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {notice ? (
+          <p className="muted" role="status" data-testid="email-notice" style={{ margin: 0 }}>
+            {notice}
+          </p>
+        ) : null}
+        {current && emailUpdates ? (
+          subscribed ? (
+            <p className="muted" style={{ margin: 0 }} data-testid="email-status">
+              {strings.emailOn.replace('{{email}}', current.email_updates?.masked ?? '')} ·{' '}
+              <button
+                type="button"
+                className="link-btn"
+                disabled={disabled}
+                onClick={() => send('POST', current.status, null)}
+              >
+                {strings.emailTurnOff}
+              </button>
+            </p>
+          ) : showEmail ? (
+            <>
+              {emailFields}
+              <button
+                type="button"
+                className="btn"
+                disabled={disabled}
+                onClick={() => send('POST', current.status, 'form')}
+              >
+                {strings.emailSave}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="link-btn"
+              disabled={disabled}
+              onClick={() => setShowEmail(true)}
+            >
+              {strings.emailAdd}
+            </button>
+          )
+        ) : null}
+        {current ? (
+          <button
+            type="button"
+            className="link-btn"
+            disabled={disabled}
+            onClick={() => send('DELETE')}
+          >
+            {strings.remove}
           </button>
-        )
-      ) : null}
-      {current ? (
-        <button type="button" className="link-btn" disabled={disabled} onClick={() => send('DELETE')}>
-          {strings.remove}
-        </button>
-      ) : null}
-    </section>
+        ) : null}
+      </section>
+      {current ? <PlanYourOwn strings={strings} /> : null}
+    </>
   );
 }

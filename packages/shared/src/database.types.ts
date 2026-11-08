@@ -215,6 +215,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"rsvp_claim_tickets": {
+                  Row: {
+                    "created_at": string,"expires_at": string,"guest_token_hash": string,"ticket_hash": string,"used_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"expires_at"?: string,"guest_token_hash": string,"ticket_hash": string,"used_at"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"expires_at"?: string,"guest_token_hash"?: string,"ticket_hash"?: string,"used_at"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"rsvp_email_subscriptions": {
                   Row: {
                     "consent_at": string,"consent_version": string,"created_at": string,"email": string,"event_id": string,"locale": string,"rsvp_id": string,"unsubscribe_token": string
@@ -296,8 +310,14 @@ isOneToOne: false
 "claim_deliveries":
 { Args: { "p_limit"?: number,"p_now"?: string }; Returns: Json[]
                            },
+"claim_guest_rsvps":
+{ Args: { "p_ticket": string }; Returns: Json
+                           },
 "complete_delivery":
 { Args: { "p_error"?: string,"p_id": string,"p_now"?: string,"p_outcome": string,"p_provider_id"?: string }; Returns: string
+                           },
+"create_claim_ticket":
+{ Args: { "p_guest_token": string }; Returns: string
                            },
 "delete_announcement":
 { Args: { "p_id": string }; Returns: undefined
@@ -331,11 +351,20 @@ isOneToOne: false
 "get_invite":
 { Args: { "p_guest_token"?: string,"p_token": string }; Returns: Json
                            },
+"get_my_invite":
+{ Args: { "p_event_id": string }; Returns: Json
+                           },
+"hash_claim_ticket":
+{ Args: { "p_ticket": string }; Returns: string
+                           },
 "hash_guest_token":
 { Args: { "p_guest_token": string }; Returns: string
                            },
 "hit_rate_limit":
 { Args: { "p_bucket": string,"p_max": number,"p_now"?: string,"p_window_seconds": number }; Returns: boolean
+                           },
+"invite_payload":
+{ Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"me": Omit<Database["public"]['Tables']["rsvps"]['Row'], Database["public"]['Tables']["rsvps"]['ComputedFields']>,"p_guest_device"?: boolean }; Returns: Json
                            },
 "is_event_host":
 { Args: { "p_event_id": string }; Returns: boolean
@@ -348,6 +377,9 @@ isOneToOne: false
                            },
 "kick_notifications_worker":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"list_my_invites":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "mask_email":
 { Args: { "p_email": string }; Returns: string
@@ -423,6 +455,9 @@ isOneToOne: false
                            },
 "schedule_event_reminder":
 { Args: { "p_event": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"p_now"?: string }; Returns: string
+                           },
+"set_my_rsvp":
+{ Args: { "p_event_id": string,"p_status": Database["public"]['Enums']["rsvp_status"] }; Returns: Json
                            },
 "unregister_push_token":
 { Args: { "p_token": string }; Returns: boolean

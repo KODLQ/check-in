@@ -38,6 +38,7 @@ function RootStack() {
       {/* Invite links work whether or not you're signed in. */}
       <Stack.Screen name="i/[token]" options={{ title: '' }} />
       <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+      <Stack.Screen name="claim" options={{ headerShown: false }} />
 
       <Stack.Protected guard={area === 'signed-out'}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
@@ -48,10 +49,17 @@ function RootStack() {
       </Stack.Protected>
 
       <Stack.Protected guard={area === 'app'}>
-        <Stack.Screen name="index" options={{ title: t('events.my_events') }} />
-        <Stack.Screen name="events/new" options={{ title: t('events.new_event'), presentation: 'modal' }} />
+        <Stack.Screen name="index" options={{ title: t('events.title') }} />
+        <Stack.Screen name="invites/[eventId]" options={{ title: '' }} />
+        <Stack.Screen
+          name="events/new"
+          options={{ title: t('events.new_event'), presentation: 'modal' }}
+        />
         <Stack.Screen name="events/[id]/index" options={{ title: '' }} />
-        <Stack.Screen name="events/[id]/edit" options={{ title: t('events.edit_event'), presentation: 'modal' }} />
+        <Stack.Screen
+          name="events/[id]/edit"
+          options={{ title: t('events.edit_event'), presentation: 'modal' }}
+        />
         <Stack.Screen name="settings" options={{ title: '' }} />
       </Stack.Protected>
     </Stack>

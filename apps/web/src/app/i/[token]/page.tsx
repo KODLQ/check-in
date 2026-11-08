@@ -151,8 +151,6 @@ export default async function InvitePage({ params }: Props) {
           <a href={googleCalendarUrl(cal)} target="_blank" rel="noreferrer">Google Calendar</a>
         </div>
       ) : null}
-
-      <p className="footer muted">{t('invite.get_app')}</p>
     </main>
   );
 }

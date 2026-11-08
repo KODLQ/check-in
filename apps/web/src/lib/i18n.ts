@@ -45,6 +45,8 @@ export function clientStrings(t: T) {
     emailRateLimited: t('rsvp.email_rate_limited'),
     consentRequired: t('errors.consent_required'),
     invalidEmail: t('errors.invalid_email'),
+    planYourOwn: t('invite.plan_your_own'),
+    planYourOwnBody: t('invite.plan_your_own_body'),
   };
 }
 export type ClientStrings = ReturnType<typeof clientStrings>;

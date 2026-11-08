@@ -79,7 +79,16 @@
     "maybe_count": "{{count}} kanske",
     "regenerate_link": "Återställ inbjudningslänk",
     "regenerate_confirm_body": "Den nuvarande länken slutar fungera. De som redan svarat finns kvar på listan.",
-    "show_guest_list": "Gäster kan se vilka som kommer"
+    "show_guest_list": "Gäster kan se vilka som kommer",
+    "title": "Event",
+    "hosting": "Du är värd",
+    "invited": "Inbjudan",
+    "past_badge": "Har varit",
+    "hosted_by_answer": "Värd: {{name}} · Ditt svar: {{status}}",
+    "plan_own_title": "Planera ditt eget på 30 sekunder",
+    "plan_own_body": "Du har fått inbjudningar — nu är det din tur att bjuda.",
+    "plan_own_cta": "Planera ditt eget",
+    "dismiss": "Inte nu"
   },
   "rsvp": {
     "going": "Kommer",
@@ -112,7 +121,9 @@
     "time_updated": "Tiden har ändrats",
     "add_to_calendar": "Lägg till i kalendern",
     "open_in_maps": "Öppna i kartor",
-    "get_app": "Planera ditt eget med check-in"
+    "get_app": "Planera ditt eget med check-in",
+    "plan_your_own": "Planera ditt eget på 30 sekunder →",
+    "plan_your_own_body": "Skaffa check-in-appen. Dina svar följer med."
   },
   "announcements": {
     "title": "Uppdateringar från värden",
@@ -175,5 +186,28 @@
       "footer": "Du får det här mejlet för att du bad om uppdateringar om det här eventet.",
       "unsubscribe": "Avregistrera"
     }
+  },
+  "invites": {
+    "closed_cancelled": "Eventet är inställt. Svaret kan inte ändras längre.",
+    "closed_past": "Eventet har redan varit.",
+    "withdraw_confirm_title": "Ta bort ditt svar?",
+    "withdraw_confirm_body": "Värden ser dig inte längre på gästlistan, och eventet försvinner från din lista."
+  },
+  "claim": {
+    "added_one": "1 inbjudan har lagts till bland dina event",
+    "added_other": "{{count}} inbjudningar har lagts till bland dina event",
+    "none": "Inga nya inbjudningar att lägga till",
+    "expired": "Länken har gått ut — öppna inbjudan igen"
+  },
+  "get_app": {
+    "title": "Skaffa check-in",
+    "body": "Planera ditt eget event på 30 sekunder. Dina inbjudningar följer med in i appen.",
+    "open_app": "Öppna appen",
+    "app_store": "Ladda ner i App Store",
+    "play_store": "Hämta på Google Play",
+    "come_back": "Har du installerat appen? Kom tillbaka hit och tryck på Öppna appen.",
+    "in_app_browser": "Den här inbyggda webbläsaren kan inte öppna check-in. Tryck på ⋯ och välj Öppna i Safari eller Öppna i webbläsare, och tryck sedan på Öppna appen.",
+    "desktop": "Skaffa check-in på din mobil.",
+    "back": "Tillbaka till inbjudan"
   }
 }

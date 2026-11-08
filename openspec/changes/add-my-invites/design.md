@@ -103,19 +103,22 @@ See proposal.md for why we are doing this. What exists today, and what shapes th
 **`claim_guest_rsvps(p_ticket text) returns jsonb`** (granted to `authenticated`)
 1. Requires `auth.uid()` and a profile with a display name.
 2. Rate limit: `hit_rate_limit('claim:'||uid, 10, 3600)`. Over the limit raises `rate_limited`.
-3. Locks the ticket row with `select ... for update` where `ticket_hash = sha256(p_ticket) and used_at is null and expires_at > now()`. If no row is found, raises `invalid_ticket` (the same error for unknown, used and expired tickets). Otherwise sets `used_at = now()`.
+3. Locks the ticket row with `select ... for update` where `ticket_hash = sha256(p_ticket) and used_at is null and expires_at > now()`. If no row is found, it **returns** `{"error":"invalid_ticket"}` (the same result for unknown, used and expired tickets). Otherwise sets `used_at = now()`.
+   - *Implementation note:* it returns instead of raising because a raise rolls back the whole RPC transaction, including the `hit_rate_limit` increment from step 2, which would make guessing unlimited. `rate_limited`, `name_required` and `not_authenticated` still raise.
 4. For each `rsvps` row `g` with `guest_token_hash = t.guest_token_hash and user_id is null`:
    - **If the account already has a row `a` on `g.event_id`:**
      - if `g.updated_at > a.updated_at`, update `a.status = g.status`;
      - delete `g`;
      - if `a.guest_token_hash` is null, set it to `g.guest_token_hash`, so this browser now edits the merged row.
    - **Otherwise:** `update g set user_id = uid`. `display_name` is left untouched.
-5. Returns `{claimed: n, merged: m}`.
+5. Deletes the `rsvp_email_subscriptions` row of every claimed or merged response. App users get push and never email (spec `notifications`: "Signed-in users SHALL NOT receive notification emails"; the worker already skips email for rows with `user_id`), so keeping the address would only retain personal data without purpose.
+6. Sets the transaction-local flag `checkin.claiming = on` while linking, and `rsvps_notify_digest` returns early when it is set: claiming only re-attributes existing answers, so the host gets no reply digest (hosts see nothing new).
+7. Returns `{claimed: n, merged: m}`.
 
 Rows with `user_id` already set to another account are skipped. Such a row can exist only if a browser's ticket was claimed by account A earlier; account B cannot steal it.
 
 **`list_my_invites() returns jsonb`** (granted to `authenticated`)
-- Selects from `rsvps r join events e join profiles host` where `r.user_id = auth.uid() and e.host_id <> auth.uid()`.
+- Selects from `rsvps r join events e join profiles host` where `r.user_id = auth.uid() and not is_event_manager(e.id)` (today equivalent to `e.host_id <> auth.uid()`; `add-co-hosts` then excludes co-hosted events automatically).
 - Each item contains:
   - the event's `id`, `title`, `starts_at`, `ends_at`, `time_zone`, `cover_path` and `theme`;
   - the host's display name;
@@ -127,7 +130,7 @@ Rows with `user_id` already set to another account are skipped. Such a row can e
 **`get_my_invite(p_event_id uuid) returns jsonb`**
 - Returns the same payload shape as `get_invite`, but only when the caller has an `rsvps` row for that event. Otherwise it returns `{"state":"not_found"}`.
 - For cancelled events it adds title, time and host (this user had already seen them).
-- Implemented by extracting the body of `get_invite` into an internal `invite_payload(ev, me)` function that is not granted to clients, so the two cannot drift apart.
+- Implemented by extracting the body of `get_invite` into an internal `invite_payload(ev, me, p_guest_device)` function that is not granted to clients, so the two cannot drift apart. `p_guest_device` adds the guest-device-only `email_updates` block (from `add-guest-updates`); `get_my_invite` passes `false`.
 
 **`set_my_rsvp(p_event_id uuid, p_status rsvp_status) returns jsonb`**
 - Updates the status of the caller's existing row only.

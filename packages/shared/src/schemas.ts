@@ -58,6 +58,16 @@ export const emailSchema = z
   .max(254, 'invalid_email')
   .pipe(z.email('invalid_email'));
 
+/** Browser guest token: random, base64url. Only its hash is stored. */
+export const guestTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{22,64}$/);
+
+/** Single-use claim ticket for handing a browser's RSVPs to the app (128 bits, base64url). */
+export const CLAIM_TICKET_PATTERN = /^[A-Za-z0-9_-]{22}$/;
+export const claimTicketSchema = z.string().regex(CLAIM_TICKET_PATTERN);
+
+/** POST /api/claim-ticket body. The guest token travels in the body, never in a URL. */
+export const claimTicketInputSchema = z.object({ guestToken: guestTokenSchema }).strict();
+
 /**
  * Guest RSVP from the web invite page.
  * `email`: omitted (or blank) = keep the current subscription, `null` = remove it, string = set/replace it.
@@ -66,7 +76,7 @@ export const emailSchema = z
 export const rsvpInputSchema = z
   .object({
     token: z.string().regex(/^[A-Za-z0-9]{12}$/),
-    guestToken: z.string().regex(/^[A-Za-z0-9_-]{22,64}$/),
+    guestToken: guestTokenSchema,
     displayName: displayNameSchema,
     status: z.enum(RSVP_STATUSES),
     email: z.preprocess(

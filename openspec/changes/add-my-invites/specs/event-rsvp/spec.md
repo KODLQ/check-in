@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Change or withdraw RSVP
-A guest SHALL be able to change or withdraw their response later from the same browser or device, without signing in. This SHALL remain possible after the response has been claimed by an account.
+A guest SHALL be able to change or withdraw their response later from the same browser or device, without signing in. From the same device the guest SHALL also be able to turn email updates on or off; turning them off or withdrawing SHALL delete the stored email. Changing or withdrawing SHALL remain possible from the same browser after the response has been claimed by an account.
 
 #### Scenario: Guest changes answer
 - **WHEN** a guest who answered Maybe opens the invite again on the same device and taps Going
@@ -11,11 +11,19 @@ A guest SHALL be able to change or withdraw their response later from the same b
 
 #### Scenario: Guest withdraws
 - **WHEN** a guest chooses to remove their response
-- **THEN** their name and response are deleted from the event
+- **THEN** their name and response are deleted from the event, together with any email they gave for updates
 
 #### Scenario: Different device
 - **WHEN** a guest opens the invite on a device where they have not responded
 - **THEN** they are treated as a new guest
+
+#### Scenario: Turn off email updates
+- **WHEN** a subscribed guest turns off email updates on the invite page
+- **THEN** their response is kept, their email is deleted, and no further emails are sent about the event
+
+#### Scenario: Add email later
+- **WHEN** a guest who responded without an email later adds one with the consent ticked on the same device
+- **THEN** they are subscribed to updates for this event and their response is unchanged
 
 #### Scenario: Same browser after claiming
 - **WHEN** a guest whose web response was claimed into their account opens the invite again in the same browser and taps Can't go
@@ -33,6 +41,10 @@ A signed-in app user SHALL be able to claim the responses made from a browser. T
 #### Scenario: Claim attempted by name
 - **WHEN** someone tries to claim responses using only a guest's display name or an event link
 - **THEN** no responses are linked
+
+#### Scenario: Email updates replaced by push
+- **WHEN** a guest who turned on email updates on the web claims that response into their account
+- **THEN** their email address for that event is deleted, and they get updates as an app user instead
 
 #### Scenario: Nothing to claim
 - **WHEN** a valid claim code is redeemed for a browser that has no responses

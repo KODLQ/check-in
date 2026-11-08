@@ -1,0 +1,143 @@
+import '@/lib/i18n';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+
+import Events from '@/app/index';
+import { supabase } from '@/lib/supabase';
+import { router } from 'expo-router';
+
+jest.mock('expo-router', () => {
+  const { useEffect } = jest.requireActual('react');
+  return {
+    router: { push: jest.fn(), replace: jest.fn() },
+    Stack: { Screen: () => null },
+    Link: ({ children }: { children: unknown }) => children,
+    useFocusEffect: (cb: () => void) => useEffect(cb, [cb]),
+  };
+});
+jest.mock('expo-constants', () => ({ expoConfig: {} }));
+jest.mock('@/components/cover', () => {
+  const { View } = jest.requireActual('react-native');
+  return { Cover: ({ children }: { children: unknown }) => <View>{children as never}</View> };
+});
+jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn(), rpc: jest.fn() } }));
+
+const DAY = 86_400_000;
+const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY).toISOString();
+
+const hostedEvent = (id: string, title: string, offsetDays: number) => ({
+  id,
+  title,
+  starts_at: iso(offsetDays),
+  ends_at: null,
+  time_zone: 'Europe/Stockholm',
+  cover_path: null,
+  theme: 'sunset',
+  cancelled_at: null,
+  rsvps: [{ status: 'going' }, { status: 'maybe' }],
+});
+const invite = (
+  id: string,
+  title: string,
+  offsetDays: number,
+  status: string,
+  state = 'active',
+) => ({
+  id,
+  title,
+  starts_at: iso(offsetDays),
+  ends_at: null,
+  time_zone: 'Europe/Stockholm',
+  cover_path: null,
+  theme: 'sunset',
+  state,
+  host: { display_name: 'Lina' },
+  my_rsvp: { status, display_name: 'Sara B' },
+});
+
+function mockData(hosted: unknown[], invites: unknown[]) {
+  const order = jest.fn().mockResolvedValue({ data: hosted, error: null });
+  (supabase.from as jest.Mock).mockReturnValue({ select: () => ({ order }) });
+  (supabase.rpc as jest.Mock).mockResolvedValue({ data: invites, error: null });
+}
+
+beforeEach(async () => {
+  jest.clearAllMocks();
+  await AsyncStorage.clear();
+});
+
+describe('home list', () => {
+  it('renders hosted and invite cards together with answers and badges', async () => {
+    mockData(
+      [hostedEvent('h1', 'My dinner', 3)],
+      [
+        invite('i1', 'Lina birthday', 1, 'maybe'),
+        invite('i2', 'Old party', -5, 'going', 'past'),
+        invite('i3', 'Called off', 2, 'going', 'cancelled'),
+      ],
+    );
+    await render(<Events />);
+    expect(await screen.findByTestId('invite-i1')).toHaveTextContent(
+      /Hosted by Lina · Your answer: Maybe/,
+    );
+    expect(screen.getByTestId('event-h1')).toHaveTextContent(/1 going · 1 maybe/);
+    expect(screen.getByTestId('event-h1')).toHaveTextContent(/Hosting/);
+    expect(screen.getByTestId('invite-i1')).toHaveTextContent(/Invite/);
+    expect(screen.getByTestId('past-i2')).toBeTruthy();
+    expect(screen.getByTestId('cancelled-i3')).toBeTruthy();
+    expect(supabase.rpc).toHaveBeenCalledWith('list_my_invites');
+
+    // Upcoming soonest first (invite, cancelled invite, hosted), then past.
+    const order = screen.getAllByTestId(/^(event|invite)-/).map((n) => n.props.testID);
+    expect(order).toEqual(['invite-i1', 'invite-i3', 'event-h1', 'invite-i2']);
+    expect(screen.queryByTestId('plan-own-card')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('invite-i1'));
+    expect(router.push).toHaveBeenCalledWith('/invites/i1');
+    await fireEvent.press(screen.getByTestId('event-h1'));
+    expect(router.push).toHaveBeenCalledWith('/events/h1');
+  });
+
+  it('shows the empty state with a create button', async () => {
+    mockData([], []);
+    await render(<Events />);
+    expect(await screen.findByTestId('events-empty')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('empty-plan-own'));
+    expect(router.push).toHaveBeenCalledWith('/events/new');
+  });
+
+  it('shows the Plan your own card with invites but no upcoming hosted events, and dismissal hides it', async () => {
+    mockData([hostedEvent('h0', 'Last month', -30)], [invite('i1', 'Lina birthday', 1, 'going')]);
+    await render(<Events />);
+    expect(await screen.findByTestId('plan-own-card')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('plan-own-cta'));
+    expect(router.push).toHaveBeenCalledWith('/events/new');
+
+    await fireEvent.press(screen.getByTestId('plan-own-dismiss'));
+    expect(screen.queryByTestId('plan-own-card')).toBeNull();
+    expect(await AsyncStorage.getItem('ci_plan_card_dismissed_at')).toBeTruthy();
+  });
+
+  it('keeps the card hidden within 7 days of dismissal', async () => {
+    await AsyncStorage.setItem('ci_plan_card_dismissed_at', String(Date.now() - 2 * DAY));
+    mockData([], [invite('i1', 'Lina birthday', 1, 'going')]);
+    await render(<Events />);
+    expect(await screen.findByTestId('invite-i1')).toBeTruthy();
+    expect(screen.queryByTestId('plan-own-card')).toBeNull();
+  });
+
+  it('shows the card again after 7 days', async () => {
+    await AsyncStorage.setItem('ci_plan_card_dismissed_at', String(Date.now() - 8 * DAY));
+    mockData([], [invite('i1', 'Lina birthday', 1, 'going')]);
+    await render(<Events />);
+    expect(await screen.findByTestId('plan-own-card')).toBeTruthy();
+  });
+
+  it('does not show the card when the user hosts an upcoming event', async () => {
+    mockData([hostedEvent('h1', 'My dinner', 3)], [invite('i1', 'Lina birthday', 1, 'going')]);
+    await render(<Events />);
+    expect(await screen.findByTestId('invite-i1')).toBeTruthy();
+    expect(screen.queryByTestId('plan-own-card')).toBeNull();
+  });
+});
