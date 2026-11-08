@@ -7,8 +7,11 @@ import { useTranslation } from 'react-i18next';
 
 import { accessArea } from '@/lib/access';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { configureNotificationHandler, registerForPush } from '@/lib/push';
+import { useNotificationRouting } from '@/lib/use-notification-routing';
 
 SplashScreen.preventAutoHideAsync();
+configureNotificationHandler();
 
 function RootStack() {
   const { session, profile, loading } = useAuth();
@@ -17,6 +20,14 @@ function RootStack() {
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();
   }, [loading]);
+
+  // Refresh this device's push registration on start/sign-in, only if already allowed (never prompts).
+  const userId = session?.user.id;
+  useEffect(() => {
+    if (userId) void registerForPush();
+  }, [userId]);
+
+  useNotificationRouting(!loading);
 
   if (loading) return null;
 

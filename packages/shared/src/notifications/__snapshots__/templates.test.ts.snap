@@ -1,0 +1,323 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`notification templates > email announcement en 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "New update about Fredagshäng",
+  "text": "Fredagshäng
+
+Demo Host: Doors open 19:30, ring Andersson
+
+View the invite: https://checkin.example/i/DemoFredag01
+
+--
+You get this email because you asked for updates about this event.
+Unsubscribe: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email announcement sv 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "Ny uppdatering om Fredagshäng",
+  "text": "Fredagshäng
+
+Demo Host: Doors open 19:30, ring Andersson
+
+Visa inbjudan: https://checkin.example/i/DemoFredag01
+
+--
+Du får det här mejlet för att du bad om uppdateringar om det här eventet.
+Avregistrera: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email event_cancelled en 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "Cancelled: Fredagshäng",
+  "text": "Fredagshäng
+
+Demo Host cancelled the event planned for Fri 11 Dec, 19:00.
+
+View the invite: https://checkin.example/i/DemoFredag01
+
+--
+You get this email because you asked for updates about this event.
+Unsubscribe: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email event_cancelled sv 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "Inställt: Fredagshäng",
+  "text": "Fredagshäng
+
+Demo Host har ställt in eventet som skulle ha varit fre 11 dec. 19:00.
+
+Visa inbjudan: https://checkin.example/i/DemoFredag01
+
+--
+Du får det här mejlet för att du bad om uppdateringar om det här eventet.
+Avregistrera: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email event_changed en 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "Updated: Fredagshäng",
+  "text": "Fredagshäng
+
+New time: Fri 11 Dec, 19:00
+
+New place: Hornsgatan 12
+
+View the invite: https://checkin.example/i/DemoFredag01
+
+--
+You get this email because you asked for updates about this event.
+Unsubscribe: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email event_changed sv 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "Ändrat: Fredagshäng",
+  "text": "Fredagshäng
+
+Ny tid: fre 11 dec. 19:00
+
+Ny plats: Hornsgatan 12
+
+Visa inbjudan: https://checkin.example/i/DemoFredag01
+
+--
+Du får det här mejlet för att du bad om uppdateringar om det här eventet.
+Avregistrera: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email event_reminder en 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "Reminder: Fredagshäng",
+  "text": "Fredagshäng
+
+Fri 11 Dec, 19:00 · Hornsgatan 12
+
+View the invite: https://checkin.example/i/DemoFredag01
+
+--
+You get this email because you asked for updates about this event.
+Unsubscribe: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email event_reminder sv 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "Påminnelse: Fredagshäng",
+  "text": "Fredagshäng
+
+fre 11 dec. 19:00 · Hornsgatan 12
+
+Visa inbjudan: https://checkin.example/i/DemoFredag01
+
+--
+Du får det här mejlet för att du bad om uppdateringar om det här eventet.
+Avregistrera: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email rsvp_email_confirmation en 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "You'll get updates about Fredagshäng",
+  "text": "Fredagshäng
+
+You asked for email updates about Fredagshäng, hosted by Demo Host.
+
+Fri 11 Dec, 19:00 · Hornsgatan 12
+
+We'll only email you about this event. The host can't see your email address.
+
+View the invite: https://checkin.example/i/DemoFredag01
+
+--
+You get this email because you asked for updates about this event.
+Unsubscribe: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email rsvp_email_confirmation sv 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "Du får uppdateringar om Fredagshäng",
+  "text": "Fredagshäng
+
+Du har bett om uppdateringar via mejl om Fredagshäng (värd: Demo Host).
+
+fre 11 dec. 19:00 · Hornsgatan 12
+
+Vi mejlar dig bara om det här eventet. Värden kan inte se din mejladress.
+
+Visa inbjudan: https://checkin.example/i/DemoFredag01
+
+--
+Du får det här mejlet för att du bad om uppdateringar om det här eventet.
+Avregistrera: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > push announcement en 1`] = `
+{
+  "body": "Demo Host: Doors open 19:30, ring Andersson",
+  "data": {
+    "kind": "announcement",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng",
+}
+`;
+
+exports[`notification templates > push announcement sv 1`] = `
+{
+  "body": "Demo Host: Doors open 19:30, ring Andersson",
+  "data": {
+    "kind": "announcement",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng",
+}
+`;
+
+exports[`notification templates > push event_cancelled en 1`] = `
+{
+  "body": "Demo Host cancelled the event planned for Fri 11 Dec, 19:00.",
+  "data": {
+    "kind": "event_cancelled",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng is cancelled",
+}
+`;
+
+exports[`notification templates > push event_cancelled sv 1`] = `
+{
+  "body": "Demo Host har ställt in eventet som skulle ha varit fre 11 dec. 19:00.",
+  "data": {
+    "kind": "event_cancelled",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng är inställt",
+}
+`;
+
+exports[`notification templates > push event_changed en 1`] = `
+{
+  "body": "New time: Fri 11 Dec, 19:00 New place: Hornsgatan 12",
+  "data": {
+    "kind": "event_changed",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng has changed",
+}
+`;
+
+exports[`notification templates > push event_changed sv 1`] = `
+{
+  "body": "Ny tid: fre 11 dec. 19:00 Ny plats: Hornsgatan 12",
+  "data": {
+    "kind": "event_changed",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng har ändrats",
+}
+`;
+
+exports[`notification templates > push event_reminder en 1`] = `
+{
+  "body": "Fri 11 Dec, 19:00 · Hornsgatan 12",
+  "data": {
+    "kind": "event_reminder",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Reminder: Fredagshäng",
+}
+`;
+
+exports[`notification templates > push event_reminder sv 1`] = `
+{
+  "body": "fre 11 dec. 19:00 · Hornsgatan 12",
+  "data": {
+    "kind": "event_reminder",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Påminnelse: Fredagshäng",
+}
+`;
+
+exports[`notification templates > push rsvp_digest en 1`] = `
+{
+  "body": "5 new replies: Alva (Going), Elias (Maybe), Maja (Can't go) +2 more",
+  "data": {
+    "kind": "rsvp_digest",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng",
+}
+`;
+
+exports[`notification templates > push rsvp_digest sv 1`] = `
+{
+  "body": "5 nya svar: Alva (Kommer), Elias (Kanske), Maja (Kan inte) +2 till",
+  "data": {
+    "kind": "rsvp_digest",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng",
+}
+`;

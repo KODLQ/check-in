@@ -2,10 +2,6 @@ import { expect, test } from '@playwright/test';
 
 import { createEvent, revoke, sql } from './fixtures';
 
-test.afterAll(async () => {
-  await sql.end();
-});
-
 test.describe('invite page states', () => {
   test('active invite shows event details without sign-in', async ({ page }) => {
     const token = await createEvent({ title: 'Kräftskiva' });

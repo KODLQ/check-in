@@ -5,6 +5,7 @@ import { EventForm } from '@/components/event-form';
 import { useAuth } from '@/lib/auth';
 import { errorKey, toEventRow } from '@/lib/events';
 import { supabase } from '@/lib/supabase';
+import { maybeAskForPush } from '@/lib/push';
 import { pickAndUpload } from '@/lib/upload';
 
 export default function NewEvent() {
@@ -24,6 +25,12 @@ export default function NewEvent() {
           .single();
         if (error || !data) return errorKey(error);
         router.replace({ pathname: '/events/[id]', params: { id: data.id, created: '1' } });
+        // Ask for notifications only after the host's first event (spec: push permission timing).
+        const { count } = await supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('host_id', userId);
+        if (count === 1) void maybeAskForPush('first_event');
       }}
     />
   );

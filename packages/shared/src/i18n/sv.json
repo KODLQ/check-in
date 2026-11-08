@@ -20,7 +20,12 @@
     "location_required": "Var är det?",
     "invalid_location": "Ogiltig plats",
     "rate_limited": "För många försök. Försök igen om några minuter.",
-    "event_closed": "Det här eventet tar inte emot svar längre"
+    "event_closed": "Det här eventet tar inte emot svar längre",
+    "consent_required": "Kryssa i rutan för att få mejl, eller töm mejlfältet",
+    "invalid_email": "Skriv en giltig mejladress",
+    "announcement_required": "Skriv något först",
+    "announcement_too_long": "Max 500 tecken",
+    "announcement_limit": "Du har postat 5 uppdateringar på 24 timmar. Du kan posta igen {{when}}."
   },
   "auth": {
     "welcome": "Hitta på något.",
@@ -87,7 +92,16 @@
     "guests": "Gäster",
     "remove_guest": "Ta bort",
     "people_going": "{{count}} personer kommer",
-    "people_going_one": "1 person kommer"
+    "people_going_one": "1 person kommer",
+    "email_label": "Mejl (valfritt)",
+    "email_placeholder": "du@exempel.se",
+    "email_consent": "Mejla mig uppdateringar om det här eventet",
+    "email_helper": "Bara för det här eventet. Värden kan inte se din mejladress.",
+    "email_on": "Mejluppdateringar på ({{email}})",
+    "email_turn_off": "Stäng av",
+    "email_add": "Få uppdateringar via mejl",
+    "email_save": "Spara mejl",
+    "email_rate_limited": "Ditt svar är sparat, men vi kunde inte slå på mejluppdateringar för den här adressen i dag."
   },
   "invite": {
     "hosted_by": "Värd: {{name}}",
@@ -99,5 +113,67 @@
     "add_to_calendar": "Lägg till i kalendern",
     "open_in_maps": "Öppna i kartor",
     "get_app": "Planera ditt eget med check-in"
+  },
+  "announcements": {
+    "title": "Uppdateringar från värden",
+    "placeholder": "Dela en uppdatering med dina gäster…",
+    "post": "Posta uppdatering",
+    "delete_confirm": "Radera uppdateringen?",
+    "delete_body": "Gäster som redan fått den behåller notisen.",
+    "empty": "Inga uppdateringar än. Gäster som kommer eller kanske kommer får en notis.",
+    "counter": "{{count}}/500"
+  },
+  "unsubscribe": {
+    "title": "Sluta få mejl om det här eventet?",
+    "body": "Du slutar få uppdateringar via mejl. Ditt svar finns kvar.",
+    "button": "Avregistrera",
+    "done_title": "Du är avregistrerad",
+    "done_body": "Du får inga fler mejl om det här eventet."
+  },
+  "push": {
+    "explainer_title": "Vill du få notiser?",
+    "explainer_host": "Vi säger till när gäster svarar.",
+    "explainer_guest": "Vi säger till om tiden eller platsen ändras, eller om eventet ställs in.",
+    "allow": "Slå på",
+    "not_now": "Inte nu"
+  },
+  "notifications": {
+    "rsvp_email_confirmation": {
+      "subject": "Du får uppdateringar om {{title}}",
+      "intro": "Du har bett om uppdateringar via mejl om {{title}} (värd: {{host}}).",
+      "privacy": "Vi mejlar dig bara om det här eventet. Värden kan inte se din mejladress."
+    },
+    "event_changed": {
+      "title": "{{title}} har ändrats",
+      "subject": "Ändrat: {{title}}",
+      "time": "Ny tid: {{when}}",
+      "location": "Ny plats: {{where}}"
+    },
+    "event_cancelled": {
+      "title": "{{title}} är inställt",
+      "subject": "Inställt: {{title}}",
+      "body": "{{host}} har ställt in eventet som skulle ha varit {{when}}."
+    },
+    "event_reminder": {
+      "title": "Påminnelse: {{title}}",
+      "subject": "Påminnelse: {{title}}",
+      "body": "{{when}} · {{where}}"
+    },
+    "announcement": {
+      "title": "{{title}}",
+      "subject": "Ny uppdatering om {{title}}",
+      "body": "{{host}}: {{text}}"
+    },
+    "rsvp_digest": {
+      "title": "{{title}}",
+      "one": "{{name}}: {{status}}",
+      "many": "{{count}} nya svar: {{names}}",
+      "more": "+{{count}} till"
+    },
+    "email": {
+      "view_invite": "Visa inbjudan",
+      "footer": "Du får det här mejlet för att du bad om uppdateringar om det här eventet.",
+      "unsubscribe": "Avregistrera"
+    }
   }
 }

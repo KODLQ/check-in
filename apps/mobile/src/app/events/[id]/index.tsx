@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, Switch, Text, View } from 'react-native';
 
+import { AnnouncementComposer, AnnouncementList, AnnouncementsCard, type AnnouncementItem } from '@/components/announcements';
 import { Cover } from '@/components/cover';
 import { Body, Button, Card, Label, Screen, useColors } from '@/components/ui';
 import { INVITE_BASE_URL } from '@/lib/config';
@@ -22,6 +23,16 @@ export default function EventDetail() {
   const [token, setToken] = useState<string | null>(null);
   const [rsvps, setRsvps] = useState<RsvpRow[]>([]);
   const [copied, setCopied] = useState(false);
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+
+  const loadAnnouncements = useCallback(async () => {
+    const { data } = await supabase
+      .from('event_announcements')
+      .select('id, body, created_at')
+      .eq('event_id', id)
+      .order('created_at', { ascending: false });
+    setAnnouncements((data ?? []).filter((a): a is AnnouncementItem => a.body !== null));
+  }, [id]);
 
   const loadRsvps = useCallback(async () => {
     const { data } = await supabase.from('rsvps').select('*').eq('event_id', id).order('created_at');
@@ -32,8 +43,8 @@ export default function EventDetail() {
     const { data } = await supabase.from('events').select('*').eq('id', id).single();
     setEvent(data);
     setToken(await fetchActiveInvite(id));
-    await loadRsvps();
-  }, [id, loadRsvps]);
+    await Promise.all([loadRsvps(), loadAnnouncements()]);
+  }, [id, loadRsvps, loadAnnouncements]);
 
   useFocusEffect(
     useCallback(() => {
@@ -44,7 +55,8 @@ export default function EventDetail() {
   // Live guest list (Realtime respects RLS, so only the host receives these rows).
   useEffect(() => {
     const channel = supabase
-      .channel(`rsvps:${id}`)
+      // Unique per mount: the same event screen can be on the stack twice (e.g. opened from a notification).
+      .channel(`rsvps:${id}:${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps', filter: `event_id=eq.${id}` }, () => {
         void loadRsvps();
       })
@@ -111,6 +123,20 @@ export default function EventDetail() {
     await supabase.from('events').update({ guest_list_visible: visible }).eq('id', id);
   }
 
+  function deleteAnnouncement(a: AnnouncementItem) {
+    Alert.alert(t('announcements.delete_confirm'), t('announcements.delete_body'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          await supabase.rpc('delete_announcement', { p_id: a.id });
+          await loadAnnouncements();
+        },
+      },
+    ]);
+  }
+
   function removeGuest(r: RsvpRow) {
     Alert.alert(r.display_name, undefined, [
       { text: t('common.cancel'), style: 'cancel' },
@@ -166,6 +192,17 @@ export default function EventDetail() {
               {link}
             </Text>
           </View>
+        ) : null}
+
+        {editable || announcements.length > 0 ? (
+          <AnnouncementsCard title={t('announcements.title')}>
+            {editable ? <AnnouncementComposer eventId={id} onPosted={loadAnnouncements} /> : null}
+            {announcements.length > 0 ? (
+              <AnnouncementList items={announcements} onDelete={deleteAnnouncement} />
+            ) : (
+              <Body muted>{t('announcements.empty')}</Body>
+            )}
+          </AnnouncementsCard>
         ) : null}
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

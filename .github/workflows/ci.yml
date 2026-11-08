@@ -19,6 +19,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test -w @check-in/shared
       - run: npm test -w @check-in/mobile
+      - run: npm run test:functions
 
   database:
     runs-on: ubuntu-latest
@@ -42,7 +43,10 @@ jobs:
         with:
           version: latest
       - run: npm ci
-      - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+      # Edge runtime stays on: e2e/notifications.spec.ts goes web -> worker -> Mailpit.
+      - run: cp supabase/functions/.env.example supabase/functions/.env
+      - run: supabase start -x studio,imgproxy,logflare,vector,supavisor
+      - run: npm run db:worker:configure
       - run: npx playwright install --with-deps chromium
         working-directory: apps/web
       - run: npm run test:e2e -w @check-in/web

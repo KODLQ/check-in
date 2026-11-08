@@ -5,12 +5,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
+import { AnnouncementList, AnnouncementsCard, type AnnouncementItem } from '@/components/announcements';
 import { Cover } from '@/components/cover';
 import { Body, Button, ErrorText, Screen, Title, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { INVITE_BASE_URL } from '@/lib/config';
 import { errorKey } from '@/lib/events';
 import { locale } from '@/lib/i18n';
+import { maybeAskForPush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 
 interface Invite {
@@ -28,6 +30,7 @@ interface Invite {
   host?: { display_name: string | null };
   counts?: { going: number; maybe: number };
   my_rsvp?: { status: RsvpStatus } | null;
+  announcements?: AnnouncementItem[];
 }
 
 /** In-app view of an invite link (opened via universal link or checkin://i/<token>). */
@@ -56,7 +59,7 @@ export default function InviteInApp() {
     );
   }
 
-  if (invite.state === 'not_found' || !invite.event) {
+  if (invite.state === 'not_found' || invite.state === 'cancelled' || !invite.event) {
     return (
       <Screen>
         <Title>{invite.state === 'cancelled' ? invite.event?.title : t('invite.not_found_title')}</Title>
@@ -72,7 +75,10 @@ export default function InviteInApp() {
     setError(null);
     const { error: rpcError } = await supabase.rpc('rsvp_as_user', { p_token: token, p_status: status });
     if (rpcError) setError(t(`errors.${errorKey(rpcError)}`, t('common.error')));
-    else await load();
+    else {
+      await load();
+      void maybeAskForPush('rsvp');
+    }
   }
 
   return (
@@ -84,6 +90,11 @@ export default function InviteInApp() {
       <Body>📍 {e.location_text}</Body>
       {e.description ? <Body muted>{e.description}</Body> : null}
       {invite.state === 'past' ? <Body muted>{t('invite.past_body')}</Body> : null}
+      {invite.announcements?.length ? (
+        <AnnouncementsCard title={t('announcements.title')}>
+          <AnnouncementList items={invite.announcements} />
+        </AnnouncementsCard>
+      ) : null}
 
       {canRsvp ? (
         <View style={{ flexDirection: 'row', gap: 8 }}>

@@ -13,6 +13,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { NEXT_PUBLIC_SITE_URL: `http://localhost:${PORT}` },
+    env: { NEXT_PUBLIC_SITE_URL: `http://localhost:${PORT}`, NEXT_PUBLIC_EMAIL_UPDATES: 'true' },
   },
 });

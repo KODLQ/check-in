@@ -38,7 +38,7 @@ reset role;
 insert into rsvp_rate_limits (bucket, window_start, count) values ('old', now() - interval '2 days', 5);
 select run_retention();
 select is((select count(*)::int from rsvp_rate_limits where bucket = 'old'), 0, 'rate-limit buckets expire after 24h');
-select is((select array_agg(title order by title) from events), array['Live', 'Past'],
+select is((select array_agg(title order by title) from events where host_id = '00000000-0000-0000-0000-00000000000a'), array['Live', 'Past'],
   'events are deleted 12 months after they end');
 
 select * from finish();

@@ -34,6 +34,17 @@ export function clientStrings(t: T) {
     rateLimited: t('errors.rate_limited'),
     eventClosed: t('errors.event_closed'),
     error: t('common.error'),
+    emailLabel: t('rsvp.email_label'),
+    emailPlaceholder: t('rsvp.email_placeholder'),
+    emailConsent: t('rsvp.email_consent'),
+    emailHelper: t('rsvp.email_helper'),
+    emailOn: t('rsvp.email_on', { email: '{{email}}' }),
+    emailTurnOff: t('rsvp.email_turn_off'),
+    emailAdd: t('rsvp.email_add'),
+    emailSave: t('rsvp.email_save'),
+    emailRateLimited: t('rsvp.email_rate_limited'),
+    consentRequired: t('errors.consent_required'),
+    invalidEmail: t('errors.invalid_email'),
   };
 }
 export type ClientStrings = ReturnType<typeof clientStrings>;

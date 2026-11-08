@@ -14,4 +14,6 @@ export const env = {
     return required('SUPABASE_SECRET_KEY');
   },
   rateLimitSalt: process.env.RATE_LIMIT_SALT ?? 'dev-only-salt',
+  /** Email opt-in on the RSVP form. Off until a DNS-verified sending domain exists (design: migration plan). */
+  emailUpdatesEnabled: process.env.NEXT_PUBLIC_EMAIL_UPDATES === 'true',
 };

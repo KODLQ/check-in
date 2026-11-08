@@ -50,13 +50,48 @@ export const makeEventInputSchema = (now: () => Date = () => new Date()) =>
 export const eventInputSchema = makeEventInputSchema();
 export type EventInput = z.input<ReturnType<typeof makeEventInputSchema>>;
 
-export const rsvpInputSchema = z.object({
-  token: z.string().regex(/^[A-Za-z0-9]{12}$/),
-  guestToken: z.string().regex(/^[A-Za-z0-9_-]{22,64}$/),
-  displayName: displayNameSchema,
-  status: z.enum(RSVP_STATUSES),
-});
+/** Trimmed, lower-cased email address (max 254 chars). Error key: `invalid_email`. */
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(254, 'invalid_email')
+  .pipe(z.email('invalid_email'));
+
+/**
+ * Guest RSVP from the web invite page.
+ * `email`: omitted (or blank) = keep the current subscription, `null` = remove it, string = set/replace it.
+ * A non-empty email requires `emailConsent === true` (error key `consent_required`).
+ */
+export const rsvpInputSchema = z
+  .object({
+    token: z.string().regex(/^[A-Za-z0-9]{12}$/),
+    guestToken: z.string().regex(/^[A-Za-z0-9_-]{22,64}$/),
+    displayName: displayNameSchema,
+    status: z.enum(RSVP_STATUSES),
+    email: z.preprocess(
+      (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+      emailSchema.nullable().optional(),
+    ),
+    emailConsent: z.boolean().optional(),
+    locale: z.enum(['en', 'sv']).optional(),
+  })
+  .refine((v) => !v.email || v.emailConsent === true, {
+    path: ['emailConsent'],
+    message: 'consent_required',
+  });
 export type RsvpInput = z.infer<typeof rsvpInputSchema>;
+
+export const ANNOUNCEMENT_MAX_LENGTH = 500;
+
+export const announcementInputSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, 'announcement_required')
+    .max(ANNOUNCEMENT_MAX_LENGTH, 'announcement_too_long'),
+});
+export type AnnouncementInput = z.infer<typeof announcementInputSchema>;
 
 /** Returns a map of field -> first error key, or null when valid. */
 export function fieldErrors<T>(

@@ -1,8 +1,12 @@
 import postgres from 'postgres';
 
-/** Direct DB access for fixtures (local Supabase only). */
+/**
+ * Direct DB access for fixtures (local Supabase only). Shared by every spec file in the worker, so specs
+ * must not call sql.end(); the idle timeout closes the connection once tests stop using it.
+ */
 export const sql = postgres(process.env.DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres', {
   max: 1,
+  idle_timeout: 2,
   onnotice: () => {},
 });
 
@@ -44,4 +48,72 @@ export async function createEvent(opts: {
 
 export async function revoke(token: string) {
   await sql`update public.event_invites set revoked_at = now() where token = ${token}`;
+}
+
+export const E2E_HOST_ID = HOST_ID;
+
+export async function eventIdFor(token: string): Promise<string> {
+  const [row] = await sql`select event_id from public.event_invites where token = ${token}`;
+  return row!.event_id as string;
+}
+
+/** Posts an announcement as the event's host, through the same RPC the app uses. */
+export async function postAnnouncement(token: string, body: string): Promise<string> {
+  const eventId = await eventIdFor(token);
+  return sql.begin(async (tx) => {
+    await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: HOST_ID, role: 'authenticated' })}, true)`;
+    await tx`set local role authenticated`;
+    const [row] = await tx`select public.post_announcement(${eventId}, ${body}) as a`;
+    return (row!.a as { id: string }).id;
+  });
+}
+
+export async function subscriptionFor(email: string) {
+  const [row] = await sql`select rsvp_id, unsubscribe_token, locale from public.rsvp_email_subscriptions where email = ${email}`;
+  return row as { rsvp_id: string; unsubscribe_token: string; locale: string } | undefined;
+}
+
+// ---- Notifications worker + Mailpit (local stack) ----
+const FUNCTIONS_URL = process.env.FUNCTIONS_URL ?? 'http://127.0.0.1:54321/functions/v1';
+const WORKER_SECRET = process.env.NOTIFICATIONS_WORKER_SECRET ?? 'dev-only-worker-secret';
+const MAILPIT = process.env.MAILPIT_URL ?? 'http://127.0.0.1:54324';
+
+export async function runWorker() {
+  const res = await fetch(`${FUNCTIONS_URL}/notifications-worker`, {
+    method: 'POST',
+    headers: { 'x-worker-secret': WORKER_SECRET },
+  });
+  if (!res.ok) throw new Error(`worker ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+export interface MailSummary {
+  ID: string;
+  Subject: string;
+  To: { Address: string }[];
+}
+
+export async function mailsTo(address: string): Promise<MailSummary[]> {
+  const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${address}"`)}`);
+  const body = (await res.json()) as { messages?: MailSummary[] };
+  return body.messages ?? [];
+}
+
+/** Polls Mailpit until a message to `address` matching `subject` arrives. */
+export async function waitForMail(address: string, subject: RegExp, timeoutMs = 60_000): Promise<MailSummary> {
+  const until = Date.now() + timeoutMs;
+  while (Date.now() < until) {
+    const hit = (await mailsTo(address)).find((m) => subject.test(m.Subject));
+    if (hit) return hit;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error(`No mail to ${address} matching ${subject} within ${timeoutMs} ms`);
+}
+
+export async function mailDetail(id: string) {
+  const [msg, headers] = await Promise.all([
+    fetch(`${MAILPIT}/api/v1/message/${id}`).then((r) => r.json() as Promise<{ Text: string; HTML: string; Subject: string }>),
+    fetch(`${MAILPIT}/api/v1/message/${id}/headers`).then((r) => r.json() as Promise<Record<string, string[]>>),
+  ]);
+  return { ...msg, headers };
 }

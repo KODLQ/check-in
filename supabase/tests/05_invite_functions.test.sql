@@ -39,7 +39,7 @@ select lives_ok($$ select upsert_rsvp((select token from t), 'guest-token-aaaaaa
 select lives_ok($$ select upsert_rsvp((select token from t), 'guest-token-aaaaaaaaaaaaaaa', 'Anna', 'going') $$,
   'guest can change their answer');
 select upsert_rsvp((select token from t), 'guest-token-bbbbbbbbbbbbbbb', 'Bo', 'declined');
-select is((select count(*)::int from rsvps), 2, 'changing an answer updates instead of duplicating');
+select is((select count(*)::int from rsvps where event_id = '10000000-0000-0000-0000-000000000001'), 2, 'changing an answer updates instead of duplicating');
 select throws_ok($$ select upsert_rsvp((select token from t), 'guest-token-ccccccccccccccc', '  ', 'going') $$,
   'P0001', 'name_required', 'a name is required');
 

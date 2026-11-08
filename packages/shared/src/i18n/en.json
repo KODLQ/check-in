@@ -20,7 +20,12 @@
     "location_required": "Where is it?",
     "invalid_location": "Invalid location",
     "rate_limited": "Too many attempts. Try again in a few minutes.",
-    "event_closed": "This event is no longer taking responses"
+    "event_closed": "This event is no longer taking responses",
+    "consent_required": "Tick the box to get emails, or clear the email",
+    "invalid_email": "Enter a valid email address",
+    "announcement_required": "Write something first",
+    "announcement_too_long": "Max 500 characters",
+    "announcement_limit": "You've posted 5 updates in 24 hours. You can post again {{when}}."
   },
   "auth": {
     "welcome": "Plan something.",
@@ -87,7 +92,16 @@
     "guests": "Guests",
     "remove_guest": "Remove",
     "people_going": "{{count}} people going",
-    "people_going_one": "1 person going"
+    "people_going_one": "1 person going",
+    "email_label": "Email (optional)",
+    "email_placeholder": "you@example.com",
+    "email_consent": "Email me updates about this event",
+    "email_helper": "Only for this event. The host can't see your email.",
+    "email_on": "Email updates on ({{email}})",
+    "email_turn_off": "Turn off",
+    "email_add": "Get updates by email",
+    "email_save": "Save email",
+    "email_rate_limited": "Your reply is saved, but we couldn't turn on email updates for this address today."
   },
   "invite": {
     "hosted_by": "Hosted by {{name}}",
@@ -99,5 +113,67 @@
     "add_to_calendar": "Add to calendar",
     "open_in_maps": "Open in maps",
     "get_app": "Plan your own with check-in"
+  },
+  "announcements": {
+    "title": "Updates from the host",
+    "placeholder": "Share an update with your guests…",
+    "post": "Post update",
+    "delete_confirm": "Delete this update?",
+    "delete_body": "Guests who already got it keep the notification.",
+    "empty": "No updates yet. Guests who are going or maybe get a notification.",
+    "counter": "{{count}}/500"
+  },
+  "unsubscribe": {
+    "title": "Stop emails about this event?",
+    "body": "You'll stop getting email updates. Your reply stays.",
+    "button": "Unsubscribe",
+    "done_title": "You're unsubscribed",
+    "done_body": "You won't get any more emails about this event."
+  },
+  "push": {
+    "explainer_title": "Get notified?",
+    "explainer_host": "We'll let you know when guests reply.",
+    "explainer_guest": "We'll let you know if the time or place changes, or if the event is cancelled.",
+    "allow": "Turn on",
+    "not_now": "Not now"
+  },
+  "notifications": {
+    "rsvp_email_confirmation": {
+      "subject": "You'll get updates about {{title}}",
+      "intro": "You asked for email updates about {{title}}, hosted by {{host}}.",
+      "privacy": "We'll only email you about this event. The host can't see your email address."
+    },
+    "event_changed": {
+      "title": "{{title}} has changed",
+      "subject": "Updated: {{title}}",
+      "time": "New time: {{when}}",
+      "location": "New place: {{where}}"
+    },
+    "event_cancelled": {
+      "title": "{{title}} is cancelled",
+      "subject": "Cancelled: {{title}}",
+      "body": "{{host}} cancelled the event planned for {{when}}."
+    },
+    "event_reminder": {
+      "title": "Reminder: {{title}}",
+      "subject": "Reminder: {{title}}",
+      "body": "{{when}} · {{where}}"
+    },
+    "announcement": {
+      "title": "{{title}}",
+      "subject": "New update about {{title}}",
+      "body": "{{host}}: {{text}}"
+    },
+    "rsvp_digest": {
+      "title": "{{title}}",
+      "one": "{{name}}: {{status}}",
+      "many": "{{count}} new replies: {{names}}",
+      "more": "+{{count}} more"
+    },
+    "email": {
+      "view_invite": "View the invite",
+      "footer": "You get this email because you asked for updates about this event.",
+      "unsubscribe": "Unsubscribe"
+    }
   }
 }

@@ -44,3 +44,35 @@ export function formatTimeRange(
     : formatEventTime(endsAt, locale, timeZone);
   return `${start} – ${end}`;
 }
+
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 365 * 24 * 3600],
+  ['month', 30 * 24 * 3600],
+  ['week', 7 * 24 * 3600],
+  ['day', 24 * 3600],
+  ['hour', 3600],
+  ['minute', 60],
+];
+
+/** "5 minutes ago" / "för 5 minuter sedan"; under a minute is "now" / "nu". */
+export function formatRelativeTime(date: Date, locale: string, now: Date = new Date()): string {
+  if (typeof Intl.RelativeTimeFormat !== 'function') return relativeFallback(date, locale, now);
+  const fmt = new Intl.RelativeTimeFormat(locale === 'sv' ? 'sv' : 'en', { numeric: 'auto' });
+  const seconds = Math.round((date.getTime() - now.getTime()) / 1000);
+  for (const [unit, size] of RELATIVE_UNITS) {
+    if (Math.abs(seconds) >= size) return fmt.format(Math.trunc(seconds / size), unit);
+  }
+  return fmt.format(0, 'second');
+}
+
+/** For runtimes without Intl.RelativeTimeFormat (Hermes): minutes/hours/yesterday, then the date. */
+function relativeFallback(date: Date, locale: string, now: Date): string {
+  const sv = locale === 'sv';
+  const minutes = Math.floor((now.getTime() - date.getTime()) / 60_000);
+  if (minutes < 1) return sv ? 'nu' : 'now';
+  if (minutes < 60) return sv ? `för ${minutes} min sedan` : `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return sv ? `för ${hours} tim sedan` : `${hours} h ago`;
+  if (hours < 48) return sv ? 'i går' : 'yesterday';
+  return formatEventTime(date, locale);
+}

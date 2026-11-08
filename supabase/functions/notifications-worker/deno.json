@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@check-in/shared/": "../../../packages/shared/src/",
+    "@check-in/shared/notifications": "../../../packages/shared/src/notifications/index.ts"
+  }
+}

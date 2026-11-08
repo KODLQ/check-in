@@ -1,0 +1,14 @@
+{
+  "Simulator Target Bundle": "se.checkin.app",
+  "aps": {
+    "alert": {
+      "title": "Fredagshäng på Söder",
+      "body": "3 new replies: Alva (Going), Elias (Going), Maja (Maybe)"
+    },
+    "sound": "default"
+  },
+  "body": {
+    "kind": "rsvp_digest",
+    "url": "/events/e0000000-0000-0000-0000-000000000001"
+  }
+}

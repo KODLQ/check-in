@@ -48,6 +48,12 @@
         {
           "photosPermission": "Choose a cover image for your event."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#FF4D6D"
+        }
       ]
     ],
     "experiments": {

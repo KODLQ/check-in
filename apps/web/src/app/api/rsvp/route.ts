@@ -34,23 +34,41 @@ function mapError(message: string | undefined) {
   if (message?.includes('not_found')) return json({ error: 'not_found' }, 404);
   if (message?.includes('name_required')) return json({ error: 'name_required' }, 400);
   if (message?.includes('rate_limited')) return json({ error: 'rate_limited' }, 429);
+  if (message?.includes('invalid_email')) return json({ error: 'invalid_email' }, 400);
   return json({ error: 'unknown' }, 500);
 }
 
+/** Maps schema issues to the error keys the form shows (name first, then email fields). */
+function inputError(issues: { path: PropertyKey[] }[]): string {
+  const fields = issues.map((i) => i.path[0]);
+  if (fields.includes('displayName')) return 'name_required';
+  if (fields.includes('email')) return 'invalid_email';
+  if (fields.includes('emailConsent')) return 'consent_required';
+  return 'invalid';
+}
+
+/** Salted so the opt-in rate-limit bucket never contains a guessable hash of the address. */
+const emailHash = (email: string) =>
+  createHash('sha256').update(`${env.rateLimitSalt}:${email}`).digest('hex');
+
 export async function POST(req: Request) {
   const parsed = rsvpInputSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) {
-    const nameIssue = parsed.error.issues.some((i) => i.path[0] === 'displayName');
-    return json({ error: nameIssue ? 'name_required' : 'invalid' }, 400);
-  }
-  const { token, guestToken, displayName, status } = parsed.data;
+  if (!parsed.success) return json({ error: inputError(parsed.error.issues) }, 400);
+  const { token, guestToken, displayName, status, email, locale } = parsed.data;
   if (!(await allowed(req, token))) return json({ error: 'rate_limited' }, 429);
 
+  // email omitted = keep the current subscription, null = turn updates off, string = opt in / replace.
+  const emailAction = email === undefined ? 'keep' : email === null ? 'remove' : 'set';
+  if (emailAction === 'set' && !env.emailUpdatesEnabled) return json({ error: 'invalid' }, 400);
   const { data, error } = await serviceClient().rpc('upsert_rsvp', {
     p_token: token,
     p_guest_token: guestToken,
     p_display_name: displayName,
     p_status: status,
+    p_email: email ?? undefined,
+    p_email_hash: email ? emailHash(email) : undefined,
+    p_email_action: emailAction,
+    p_locale: locale ?? 'en',
   });
   if (error) return mapError(error.message);
   return json(data);

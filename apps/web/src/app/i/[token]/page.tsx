@@ -1,4 +1,4 @@
-import { formatEventTime, formatTimeRange, getTheme, inviteUrl, mapsUrl } from '@check-in/shared';
+import { formatEventTime, formatRelativeTime, formatTimeRange, getTheme, inviteUrl, mapsUrl } from '@check-in/shared';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 
@@ -101,10 +101,32 @@ export default async function InvitePage({ params }: Props) {
 
       {e.description ? <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{e.description}</p> : null}
 
+      {invite.announcements?.length ? (
+        <section className="card" aria-label={t('announcements.title')} data-testid="announcements">
+          <strong>{t('announcements.title')}</strong>
+          <ul className="announcements">
+            {invite.announcements.map((a) => (
+              <li key={a.id}>
+                <p>{a.body}</p>
+                <time dateTime={a.created_at} title={formatEventTime(new Date(a.created_at), locale, e.time_zone)}>
+                  {formatRelativeTime(new Date(a.created_at), locale)}
+                </time>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {invite.state === 'past' ? (
         <p className="card muted" data-testid="past">{t('invite.past_body')}</p>
       ) : (
-        <RsvpForm token={token} current={invite.my_rsvp} strings={clientStrings(t)} />
+        <RsvpForm
+          token={token}
+          current={invite.my_rsvp}
+          strings={clientStrings(t)}
+          locale={locale}
+          emailUpdates={env.emailUpdatesEnabled}
+        />
       )}
 
       <section className="card" aria-label={t('rsvp.guests')}>

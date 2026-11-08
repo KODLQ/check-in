@@ -21,6 +21,24 @@ export interface InviteEvent {
   guest_list_visible: boolean;
 }
 
+export interface EmailUpdates {
+  state: 'on' | 'off' | 'rate_limited';
+  /** e.g. "a•••@gmail.com". Only ever returned to the guest's own device. */
+  masked: string | null;
+}
+
+export interface MyRsvp {
+  status: RsvpStatus;
+  display_name: string;
+  email_updates?: EmailUpdates;
+}
+
+export interface Announcement {
+  id: string;
+  body: string;
+  created_at: string;
+}
+
 export type Invite =
   | { state: 'not_found' }
   | { state: 'cancelled'; event: { title: string } }
@@ -30,7 +48,8 @@ export type Invite =
       host: { display_name: string | null; avatar_path: string | null };
       counts: { going: number; maybe: number };
       guests: { display_name: string; status: RsvpStatus }[] | null;
-      my_rsvp: { status: RsvpStatus; display_name: string } | null;
+      my_rsvp: MyRsvp | null;
+      announcements: Announcement[];
     };
 
 export const GUEST_COOKIE = 'ci_guest';

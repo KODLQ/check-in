@@ -4,6 +4,7 @@ import { Alert, ScrollView } from 'react-native';
 
 import { Body, Button, Title, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { forgetLocalPushToken, signOut } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 
 export default function Settings() {
@@ -23,7 +24,10 @@ export default function Settings() {
           const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
           setBusy(false);
           if (error) Alert.alert(t('common.error'));
-          else await supabase.auth.signOut({ scope: 'local' });
+          else {
+            await forgetLocalPushToken();
+            await supabase.auth.signOut({ scope: 'local' });
+          }
         },
       },
     ]);
@@ -37,7 +41,7 @@ export default function Settings() {
     >
       <Title>{profile?.display_name}</Title>
       <Body muted>{session?.user.email}</Body>
-      <Button variant="secondary" title={t('auth.sign_out')} onPress={() => supabase.auth.signOut()} />
+      <Button variant="secondary" title={t('auth.sign_out')} onPress={() => void signOut()} />
       <Button variant="danger" title={t('profile.delete_account')} loading={busy} onPress={confirmDelete} />
     </ScrollView>
   );

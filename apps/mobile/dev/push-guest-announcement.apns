@@ -1,0 +1,14 @@
+{
+  "Simulator Target Bundle": "se.checkin.app",
+  "aps": {
+    "alert": {
+      "title": "Picnic i Tantolunden",
+      "body": "Demo Host: Bring a blanket!"
+    },
+    "sound": "default"
+  },
+  "body": {
+    "kind": "announcement",
+    "url": "/i/DemoPicnic01"
+  }
+}

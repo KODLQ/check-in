@@ -23,7 +23,33 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "event_invites": {
+            "event_announcements": {
+                  Row: {
+                    "author_id": string | null,"body": string | null,"created_at": string,"deleted_at": string | null,"event_id": string,"id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_id"?: string | null,"body"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"event_id": string,"id"?: string
+                  }
+                  Update: {
+                    "author_id"?: string | null,"body"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"event_id"?: string,"id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "event_announcements_author_id_fkey"
+      columns: ["author_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "event_announcements_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"event_invites": {
                   Row: {
                     "created_at": string,"event_id": string,"revoked_at": string | null,"token": string
                   }
@@ -63,6 +89,98 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"notification_deliveries": {
+                  Row: {
+                    "attempts": number,"channel": string,"created_at": string,"id": string,"last_error": string | null,"locked_until": string | null,"next_attempt_at": string,"notification_id": string,"provider_message_id": string | null,"push_token_id": string | null,"receipt_checked_at": string | null,"rsvp_id": string | null,"sent_at": string | null,"status": string,"urgent": boolean,"user_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"channel": string,"created_at"?: string,"id"?: string,"last_error"?: string | null,"locked_until"?: string | null,"next_attempt_at"?: string,"notification_id": string,"provider_message_id"?: string | null,"push_token_id"?: string | null,"receipt_checked_at"?: string | null,"rsvp_id"?: string | null,"sent_at"?: string | null,"status"?: string,"urgent"?: boolean,"user_id"?: string | null
+                  }
+                  Update: {
+                    "attempts"?: number,"channel"?: string,"created_at"?: string,"id"?: string,"last_error"?: string | null,"locked_until"?: string | null,"next_attempt_at"?: string,"notification_id"?: string,"provider_message_id"?: string | null,"push_token_id"?: string | null,"receipt_checked_at"?: string | null,"rsvp_id"?: string | null,"sent_at"?: string | null,"status"?: string,"urgent"?: boolean,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_deliveries_notification_id_fkey"
+      columns: ["notification_id"]
+isOneToOne: false
+      referencedRelation: "notifications"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_deliveries_push_token_fk"
+      columns: ["push_token_id"]
+isOneToOne: false
+      referencedRelation: "push_tokens"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_deliveries_rsvp_id_fkey"
+      columns: ["rsvp_id"]
+isOneToOne: false
+      referencedRelation: "rsvps"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_deliveries_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"notification_kinds": {
+                  Row: {
+                    "channels": (string)[],"kind": string,"stale_after_start": boolean,"urgent": boolean
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "channels": (string)[],"kind": string,"stale_after_start"?: boolean,"urgent"?: boolean
+                  }
+                  Update: {
+                    "channels"?: (string)[],"kind"?: string,"stale_after_start"?: boolean,"urgent"?: boolean
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"notifications": {
+                  Row: {
+                    "audience": string,"coalesce_key": string | null,"created_at": string,"dedupe_key": string | null,"event_id": string | null,"exclude_user_id": string | null,"id": string,"kind": string,"not_before": string,"payload": NonNullable<Json>,"processed_at": string | null,"state": string,"subject_id": string | null,"target_rsvp_id": string | null,"target_user_id": string | null,"notification_recipients": {
+              "channel": string,"push_token_id": string,"rsvp_id": string,"user_id": string
+            } | null
+                  }
+                  ComputedFields: "notification_recipients"
+                  Insert: {
+                    "audience": string,"coalesce_key"?: string | null,"created_at"?: string,"dedupe_key"?: string | null,"event_id"?: string | null,"exclude_user_id"?: string | null,"id"?: string,"kind": string,"not_before"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"state"?: string,"subject_id"?: string | null,"target_rsvp_id"?: string | null,"target_user_id"?: string | null
+                  }
+                  Update: {
+                    "audience"?: string,"coalesce_key"?: string | null,"created_at"?: string,"dedupe_key"?: string | null,"event_id"?: string | null,"exclude_user_id"?: string | null,"id"?: string,"kind"?: string,"not_before"?: string,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"state"?: string,"subject_id"?: string | null,"target_rsvp_id"?: string | null,"target_user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notifications_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notifications_kind_fkey"
+      columns: ["kind"]
+isOneToOne: false
+      referencedRelation: "notification_kinds"
+      referencedColumns: ["kind"]
+    },{
+      foreignKeyName: "notifications_target_rsvp_id_fkey"
+      columns: ["target_rsvp_id"]
+isOneToOne: false
+      referencedRelation: "rsvps"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notifications_target_user_id_fkey"
+      columns: ["target_user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"profiles": {
                   Row: {
                     "avatar_path": string | null,"created_at": string,"display_name": string | null,"id": string,"locale": string | null,"updated_at": string
@@ -76,6 +194,52 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"push_tokens": {
+                  Row: {
+                    "created_at": string,"id": string,"last_seen_at": string,"locale": string,"platform": string,"token": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"last_seen_at"?: string,"locale"?: string,"platform": string,"token": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"last_seen_at"?: string,"locale"?: string,"platform"?: string,"token"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_tokens_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"rsvp_email_subscriptions": {
+                  Row: {
+                    "consent_at": string,"consent_version": string,"created_at": string,"email": string,"event_id": string,"locale": string,"rsvp_id": string,"unsubscribe_token": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "consent_at": string,"consent_version": string,"created_at"?: string,"email": string,"event_id": string,"locale"?: string,"rsvp_id": string,"unsubscribe_token"?: string
+                  }
+                  Update: {
+                    "consent_at"?: string,"consent_version"?: string,"created_at"?: string,"email"?: string,"event_id"?: string,"locale"?: string,"rsvp_id"?: string,"unsubscribe_token"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "rsvp_email_subscriptions_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "rsvp_email_subscriptions_rsvp_id_fkey"
+      columns: ["rsvp_id"]
+isOneToOne: true
+      referencedRelation: "rsvps"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"rsvp_rate_limits": {
                   Row: {
@@ -123,8 +287,43 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "event_ended_at":
+            "apply_quiet_hours":
+{ Args: { "p_ts": string,"p_urgent": boolean }; Returns: string
+                           },
+"cancel_event_notifications":
+{ Args: { "p_event_id": string,"p_except_kind"?: string }; Returns: number
+                           },
+"claim_deliveries":
+{ Args: { "p_limit"?: number,"p_now"?: string }; Returns: Json[]
+                           },
+"complete_delivery":
+{ Args: { "p_error"?: string,"p_id": string,"p_now"?: string,"p_outcome": string,"p_provider_id"?: string }; Returns: string
+                           },
+"delete_announcement":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"delivery_backoff":
+{ Args: { "p_attempts": number }; Returns: string
+                           },
+"due_push_receipts":
+{ Args: { "p_limit"?: number,"p_now"?: string }; Returns: {
+              "delivery_id": string,"ticket_id": string
+            }[]
+                           },
+"email_bounced":
+{ Args: { "p_provider_message_id": string }; Returns: boolean
+                           },
+"email_consent_version":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"enqueue_notification":
+{ Args: { "p_audience": string,"p_coalesce_key"?: string,"p_coalesce_mode"?: string,"p_dedupe_key"?: string,"p_event_id": string,"p_exclude_user_id"?: string,"p_kind": string,"p_not_before"?: string,"p_payload"?: Json,"p_subject_id"?: string,"p_target_rsvp_id"?: string,"p_target_user_id"?: string }; Returns: string
+                           },
+"event_ended_at":
 { Args: { "e": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']> }; Returns: string
+                           },
+"fan_out_due_notifications":
+{ Args: { "p_limit"?: number,"p_now"?: string }; Returns: number
                            },
 "generate_invite_token":
 { Args: Record<PropertyKey, never>; Returns: string
@@ -136,13 +335,42 @@ isOneToOne: false
 { Args: { "p_guest_token": string }; Returns: string
                            },
 "hit_rate_limit":
-{ Args: { "p_bucket": string,"p_max": number,"p_window_seconds": number }; Returns: boolean
+{ Args: { "p_bucket": string,"p_max": number,"p_now"?: string,"p_window_seconds": number }; Returns: boolean
                            },
 "is_event_host":
 { Args: { "p_event_id": string }; Returns: boolean
                            },
+"is_event_manager":
+{ Args: { "p_event_id": string }; Returns: boolean
+                           },
+"is_event_manager_for":
+{ Args: { "p_event_id": string,"p_user_id": string }; Returns: boolean
+                           },
+"kick_notifications_worker":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"mask_email":
+{ Args: { "p_email": string }; Returns: string
+                           },
+"max_announcements_per_day":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "max_rsvps_per_event":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"merge_notification_payload":
+{ Args: { "p_new": Json,"p_old": Json }; Returns: Json
+                           },
+"notification_is_urgent":
+{ Args: { "n": Omit<Database["public"]['Tables']["notifications"]['Row'], Database["public"]['Tables']["notifications"]['ComputedFields']>,"p_now": string }; Returns: boolean
+                           },
+"notification_recipients":
+{ Args: { "n": Omit<Database["public"]['Tables']["notifications"]['Row'], Database["public"]['Tables']["notifications"]['ComputedFields']> }; Returns: {
+              "channel": string,"push_token_id": string,"rsvp_id": string,"user_id": string
+            }[]
+                           },
+"notification_stale_reason":
+{ Args: { "n": Omit<Database["public"]['Tables']["notifications"]['Row'], Database["public"]['Tables']["notifications"]['ComputedFields']>,"p_now": string }; Returns: string
                            },
 "open_event_for_token":
 { Args: { "p_token": string }; Returns: {
@@ -172,17 +400,38 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"post_announcement":
+{ Args: { "p_body": string,"p_event_id": string }; Returns: Json
+                           },
+"random_url_token":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"record_push_receipt":
+{ Args: { "p_delivery_id": string,"p_error"?: string,"p_now"?: string,"p_status": string }; Returns: undefined
+                           },
 "regenerate_invite":
 { Args: { "p_event_id": string }; Returns: string
+                           },
+"register_push_token":
+{ Args: { "p_locale"?: string,"p_platform": string,"p_token": string }; Returns: undefined
                            },
 "rsvp_as_user":
 { Args: { "p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
                            },
 "run_retention":
-{ Args: Record<PropertyKey, never>; Returns: undefined
+{ Args: { "p_now"?: string }; Returns: undefined
+                           },
+"schedule_event_reminder":
+{ Args: { "p_event": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"p_now"?: string }; Returns: string
+                           },
+"unregister_push_token":
+{ Args: { "p_token": string }; Returns: boolean
+                           },
+"unsubscribe_email":
+{ Args: { "p_token": string }; Returns: undefined
                            },
 "upsert_rsvp":
-{ Args: { "p_display_name": string,"p_guest_token": string,"p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
+{ Args: { "p_display_name": string,"p_email"?: string,"p_email_action"?: string,"p_email_hash"?: string,"p_guest_token": string,"p_locale"?: string,"p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
                            },
 "withdraw_rsvp":
 { Args: { "p_guest_token": string,"p_token": string }; Returns: boolean
