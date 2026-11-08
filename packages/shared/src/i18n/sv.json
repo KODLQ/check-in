@@ -209,5 +209,21 @@
     "in_app_browser": "Den här inbyggda webbläsaren kan inte öppna check-in. Tryck på ⋯ och välj Öppna i Safari eller Öppna i webbläsare, och tryck sedan på Öppna appen.",
     "desktop": "Skaffa check-in på din mobil.",
     "back": "Tillbaka till inbjudan"
+  },
+  "story": {
+    "cta": "Svara på",
+    "share_to_story": "Dela i story",
+    "instagram": "Instagram Stories",
+    "snapchat": "Snapchat",
+    "more": "Mer…",
+    "pick_destination": "Dela i story",
+    "link_copied_sticker": "Länken är kopierad – lägg till den med länk-klistermärket",
+    "image_failed": "Kunde inte förbereda bilden",
+    "direct_failed": "Kunde inte öppna appen. Öppnar delningsmenyn i stället.",
+    "share": "Dela",
+    "save_image": "Spara bild",
+    "copy_link": "Kopiera länk",
+    "copied": "Länken är kopierad",
+    "share_text": "Du är bjuden: {{title}}"
   }
 }

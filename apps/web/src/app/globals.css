@@ -73,3 +73,6 @@ label { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: 
 .plan-own:disabled { opacity: 0.6; cursor: default; }
 .store-links { display: flex; flex-direction: column; gap: 10px; }
 .store-links a { text-align: center; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.share-fallback { display: flex; flex-direction: column; gap: 8px; }
+.share-fallback a.btn { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.share-fallback input { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); }

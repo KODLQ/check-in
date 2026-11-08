@@ -14,7 +14,14 @@
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:checkin.example"
-      ]
+      ],
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "instagram-stories",
+          "instagram",
+          "snapchat"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -54,7 +61,8 @@
         {
           "color": "#FF4D6D"
         }
-      ]
+      ],
+      "./plugins/with-story-share"
     ],
     "experiments": {
       "typedRoutes": true,

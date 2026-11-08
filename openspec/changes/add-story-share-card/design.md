@@ -96,6 +96,17 @@ The fetch starts on tap, not on page load, to keep the invite page light inside 
 - **Mobile (Jest):** `story-share.ts` destination availability matrix (installed × configured), fallback on error, no share on download failure, clipboard copy before Instagram/share sheet.
 - **Manual:** real devices for Instagram and Snapchat (simulators lack the apps).
 
+## Implementation notes (deviations found while applying)
+
+- **Render cache uses `unstable_cache`, not `'use cache'`.** In Next.js 16 `'use cache'` requires `cacheComponents: true`, which changes how every page that reads `cookies()`/`headers()` prerenders (they would need Suspense boundaries). That is out of scope here, so the render is cached with `unstable_cache` (still the Next.js data cache, keyed by the same content key, `revalidate` 7 days) and stored as a base64 string. Migrate to `'use cache'` + `cacheLife('days')` when the app adopts Cache Components.
+- **Helpers split in two files.** `apps/web/src/lib/invite-image-model.ts` holds the pure `storyImageModel(invite, locale, token, urls)` (no `server-only`, so it is unit-tested directly by Playwright); `invite-image.tsx` holds the renderer, cache and shared `IMAGE_CACHE_CONTROL`. `urls` (site URL, cover URL builder) is an extra argument because env access is server-only. There are no custom fonts; `next/og`'s bundled Geist Regular is used for both images.
+- **Cover loading.** The renderer fetches the cover itself (resized via Supabase image transformation when enabled, else the original object) and inlines it as a data URI; a cover that cannot be fetched falls back to the theme instead of failing the render. With a cover the story PNG is ~1.4 MB, close to the 2 MB item limit of some data-cache backends; if an entry is too large it is simply re-rendered.
+- **`react-native-share` v12 ships its own config plugin**, but it depends on `expo-build-properties`; it is not used. The local `plugins/with-story-share.js` adds Android `<queries>` and, only when `EXPO_PUBLIC_SNAP_CLIENT_ID` is set at prebuild, the Snap Kit entries (iOS `SCSDKClientId` + `bitmoji-sdk`/`itms-apps` query schemes; Android `com.snapchat.kit.sdk.clientId` meta-data and a `${applicationId}.fileprovider` FileProvider).
+- **`@snapchat/snap-kit-react-native` is 0.4.0 (last published Nov 2024)** and uses legacy `NativeModules` (SnapSDK pods 1.15). It builds and links on iOS with RN 0.88 through the interop layer; Android was not built here. The package reads its native modules at import time, so it is `require`d only inside the Snapchat handler, which only runs when the client ID is configured. Revisit if it breaks an RN/Expo upgrade (fallback: a small Expo module around Creative Kit).
+- **Install detection on Android** uses `react-native-share`'s `isPackageInstalled` (package names), iOS uses `Linking.canOpenURL`.
+- **Downloaded files.** The share-sheet path deletes the image once the sheet is dismissed. Instagram/Snapchat (and Android intents) may read the file after control returns to us, so for direct destinations the file is removed at the start of the next share (all `story-*` files in the cache) and otherwise by the OS cache purge.
+- The host-app toast for "Link copied — add it with the Link sticker" is shown below the navigation header (`Toast topOffset`), so it stays visible above the share sheet.
+
 ## Risks / Trade-offs
 
 - [Instagram/Snap change their sharing APIs or requirements] → Isolated behind `story-share.ts` destinations; share-sheet fallback always available.

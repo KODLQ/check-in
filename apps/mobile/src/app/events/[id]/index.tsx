@@ -7,6 +7,8 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, Switch
 
 import { AnnouncementComposer, AnnouncementList, AnnouncementsCard, type AnnouncementItem } from '@/components/announcements';
 import { Cover } from '@/components/cover';
+import { StoryShareButton } from '@/components/story-share-button';
+import { Toast } from '@/components/toast';
 import { Body, Button, Card, Label, Screen, useColors } from '@/components/ui';
 import { INVITE_BASE_URL } from '@/lib/config';
 import { fetchActiveInvite } from '@/lib/events';
@@ -24,6 +26,8 @@ export default function EventDetail() {
   const [rsvps, setRsvps] = useState<RsvpRow[]>([]);
   const [copied, setCopied] = useState(false);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+  const hideToast = useCallback(() => setToast(null), []);
 
   const loadAnnouncements = useCallback(async () => {
     const { data } = await supabase
@@ -187,6 +191,7 @@ export default function EventDetail() {
         {editable && link ? (
           <View style={{ gap: 10 }}>
             <Button testID="share" title={t('events.share')} onPress={share} />
+            {token ? <StoryShareButton token={token} link={link} title={event.title} notify={setToast} /> : null}
             <Button variant="secondary" title={copied ? t('events.copied') : t('events.copy_link')} onPress={copy} />
             <Text selectable style={{ color: c.muted, textAlign: 'center' }} testID="invite-link">
               {link}
@@ -238,6 +243,7 @@ export default function EventDetail() {
           </View>
         ) : null}
       </ScrollView>
+      <Toast message={toast} onHide={hideToast} topOffset={64} />
     </>
   );
 }

@@ -20,3 +20,8 @@ export function mapsUrl(opts: {
   }
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(opts.query)}`;
 }
+
+/** Invite URL for printing on images: no scheme, no trailing slash (e.g. "checkin.example/i/AbC123"). */
+export function displayInviteUrl(baseUrl: string, token: string): string {
+  return inviteUrl(baseUrl.trim().replace(/\/+$/, ''), token).replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
+}

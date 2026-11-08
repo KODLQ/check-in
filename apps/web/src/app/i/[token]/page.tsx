@@ -8,6 +8,7 @@ import { clientStrings, getLocale, makeT } from '@/lib/i18n';
 import { getInvite, GUEST_COOKIE } from '@/lib/invite';
 import { avatarUrl, coverUrl } from '@/lib/supabase';
 import { RsvpForm } from './rsvp-form';
+import { ShareInvite } from './share-invite';
 
 type Props = PageProps<'/i/[token]'>;
 
@@ -144,6 +145,20 @@ export default async function InvitePage({ params }: Props) {
           </ul>
         ) : null}
       </section>
+
+      {invite.state === 'active' ? (
+        <ShareInvite
+          token={token}
+          url={url}
+          strings={{
+            share: t('story.share'),
+            saveImage: t('story.save_image'),
+            copyLink: t('story.copy_link'),
+            copied: t('story.copied'),
+            shareText: t('story.share_text', { title: e.title }),
+          }}
+        />
+      ) : null}
 
       {invite.state === 'active' ? (
         <div className="actions">

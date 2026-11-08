@@ -209,5 +209,21 @@
     "in_app_browser": "This in-app browser can't open check-in. Tap ⋯ and choose Open in Safari or Open in browser, then tap Open the app.",
     "desktop": "Get check-in on your phone.",
     "back": "Back to the invite"
+  },
+  "story": {
+    "cta": "RSVP at",
+    "share_to_story": "Share to Story",
+    "instagram": "Instagram Stories",
+    "snapchat": "Snapchat",
+    "more": "More…",
+    "pick_destination": "Share to Story",
+    "link_copied_sticker": "Link copied — add it with the Link sticker",
+    "image_failed": "Couldn't prepare the image",
+    "direct_failed": "Couldn't open the app. Opening the share sheet instead.",
+    "share": "Share",
+    "save_image": "Save image",
+    "copy_link": "Copy link",
+    "copied": "Link copied",
+    "share_text": "You're invited: {{title}}"
   }
 }

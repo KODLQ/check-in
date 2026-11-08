@@ -1,13 +1,15 @@
-import { formatEventTime, getTheme } from '@check-in/shared';
+import { formatEventTime } from '@check-in/shared';
 import { ImageResponse } from 'next/og';
 
 import { getLocale, makeT } from '@/lib/i18n';
 import { getInvite } from '@/lib/invite';
-import { coverUrl } from '@/lib/supabase';
+import { coverUrl, IMAGE_CACHE_CONTROL, themeBackground } from '@/lib/invite-image';
 
 export const alt = 'Event invite';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
+
+const options = { ...size, headers: { 'cache-control': IMAGE_CACHE_CONTROL } };
 
 // Preview card: cover, title, date and host. Never the address or guest list.
 export default async function Image({ params }: { params: Promise<{ token: string }> }) {
@@ -22,12 +24,11 @@ export default async function Image({ params }: { params: Promise<{ token: strin
           check-in
         </div>
       ),
-      size,
+      options,
     );
   }
 
   const e = invite.event;
-  const theme = getTheme(e.theme);
   const cover = coverUrl(e.cover_path);
   const when = formatEventTime(new Date(e.starts_at), locale, e.time_zone);
 
@@ -39,7 +40,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
           height: '100%',
           display: 'flex',
           position: 'relative',
-          background: `linear-gradient(135deg, ${theme.colors[0]}, ${theme.colors[1]})`,
+          background: themeBackground(e.theme),
         }}
       >
         {cover ? (
@@ -65,6 +66,6 @@ export default async function Image({ params }: { params: Promise<{ token: strin
         </div>
       </div>
     ),
-    size,
+    options,
   );
 }

@@ -7,10 +7,13 @@ export function Toast({
   message,
   onHide,
   durationMs = 4000,
+  topOffset = 8,
 }: {
   message: string | null;
   onHide: () => void;
   durationMs?: number;
+  /** Distance below the safe area; larger on screens with a navigation header. */
+  topOffset?: number;
 }) {
   const insets = useSafeAreaInsets();
   useEffect(() => {
@@ -27,7 +30,7 @@ export function Toast({
       onPress={onHide}
       style={{
         position: 'absolute',
-        top: insets.top + 8,
+        top: insets.top + topOffset,
         left: 16,
         right: 16,
         backgroundColor: 'rgba(17,17,20,0.92)',
