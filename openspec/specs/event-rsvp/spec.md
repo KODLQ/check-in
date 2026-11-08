@@ -38,7 +38,7 @@ A guest SHALL be able to respond Going, Maybe or Can't go from the invite page b
 - **THEN** the response is not saved and the email field shows an error
 
 ### Requirement: Change or withdraw RSVP
-A guest SHALL be able to change or withdraw their response later from the same browser or device, without signing in. From the same device the guest SHALL also be able to turn email updates on or off; turning them off or withdrawing SHALL delete the stored email.
+A guest SHALL be able to change or withdraw their response later from the same browser or device, without signing in. From the same device the guest SHALL also be able to turn email updates on or off; turning them off or withdrawing SHALL delete the stored email. Changing or withdrawing SHALL remain possible from the same browser after the response has been claimed by an account.
 
 #### Scenario: Guest changes answer
 - **WHEN** a guest who answered Maybe opens the invite again on the same device and taps Going
@@ -59,6 +59,10 @@ A guest SHALL be able to change or withdraw their response later from the same b
 #### Scenario: Add email later
 - **WHEN** a guest who responded without an email later adds one with the consent ticked on the same device
 - **THEN** they are subscribed to updates for this event and their response is unchanged
+
+#### Scenario: Same browser after claiming
+- **WHEN** a guest whose web response was claimed into their account opens the invite again in the same browser and taps Can't go
+- **THEN** the claimed response is updated, the account still holds it, and no duplicate response is created
 
 ### Requirement: RSVP closed for inactive events
 RSVPs SHALL NOT be accepted for events that are cancelled or have already ended.
@@ -98,3 +102,59 @@ The system SHALL limit how many RSVPs can be created per invite link and per cli
 #### Scenario: Flood of RSVPs
 - **WHEN** a single client submits RSVPs to an event faster than the allowed rate
 - **THEN** further RSVPs from that client are rejected with a "try again later" message
+
+### Requirement: Claim web RSVPs into an account
+A signed-in app user SHALL be able to claim the responses made from a browser. To do so they redeem a claim code that only that browser can create. Claiming SHALL link every response that browser made to the account, including responses to ended and cancelled events. Responses SHALL NOT be claimable by display name or any other guessable detail.
+
+#### Scenario: Guest installs the app and signs in
+- **WHEN** a guest who answered two invites on the web uses the hand-off from that browser and then signs in to the app
+- **THEN** both responses are linked to their account and appear in their invites list
+
+#### Scenario: Claim attempted by name
+- **WHEN** someone tries to claim responses using only a guest's display name or an event link
+- **THEN** no responses are linked
+
+#### Scenario: Email updates replaced by push
+- **WHEN** a guest who turned on email updates on the web claims that response into their account
+- **THEN** their email address for that event is deleted, and they get updates as an app user instead
+
+#### Scenario: Nothing to claim
+- **WHEN** a valid claim code is redeemed for a browser that has no responses
+- **THEN** the claim succeeds with zero responses linked
+
+### Requirement: Claim merges duplicate responses
+When a claimed response is for an event on which the account already has a response, the system SHALL keep exactly one response for that account. It SHALL hold the most recently updated answer. The other response SHALL be removed.
+
+#### Scenario: Account already answered the same event
+- **WHEN** an account answered Maybe in the app, the browser later answered Going on the web, and the browser's responses are claimed
+- **THEN** the account has a single response for that event with the answer Going
+
+#### Scenario: Account answer is newer
+- **WHEN** the account's existing response was updated after the browser's response
+- **THEN** the account keeps its existing answer and the browser's response is removed
+
+### Requirement: Identity after claiming
+After claiming, a response SHALL belong to the account. It SHALL keep its display name until the user changes it. Changing the answer from the app SHALL NOT replace the display name. Hosts SHALL see the same name and answer as before the claim and SHALL NOT gain access to any account details.
+
+#### Scenario: Name kept
+- **WHEN** a guest who answered as "Sara B" claims into an account whose profile name is "Sara Berg" and then changes the answer in the app
+- **THEN** the host's guest list still shows "Sara B" with the new answer
+
+#### Scenario: Host view unchanged
+- **WHEN** a host views their guest list after one of the guests claimed their response
+- **THEN** the guest appears with the same name and answer, and no email, avatar or other account detail is shown
+
+### Requirement: Claim code limits
+A claim code SHALL be random and unguessable, single-use, and valid for at most 24 hours. Unknown, expired and already-used codes SHALL produce the same failure. Claim attempts SHALL be rate-limited per account, and code creation SHALL be rate-limited per client.
+
+#### Scenario: Code reused
+- **WHEN** a claim code that was already redeemed is redeemed again by any account
+- **THEN** the claim fails with the same message as for an unknown code and no responses are linked
+
+#### Scenario: Code expired
+- **WHEN** a claim code is redeemed more than 24 hours after it was created
+- **THEN** the claim fails and the user is told to start the hand-off again from the invite page
+
+#### Scenario: Guessing codes
+- **WHEN** an account submits claim codes faster than the allowed rate
+- **THEN** further attempts are rejected with a "try again later" message

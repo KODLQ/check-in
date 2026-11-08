@@ -33,7 +33,7 @@ The system SHALL require a display name on first sign-in and allow an optional a
 - **THEN** the host's display name and avatar (if set) are shown
 
 ### Requirement: Account deletion
-The system SHALL let a signed-in host delete their account. Deleting an account SHALL delete their profile, their events, and all RSVPs to those events.
+The system SHALL let a signed-in host delete their account. Deleting an account SHALL delete their profile, their events, and all RSVPs to those events. It SHALL also delete every RSVP the account made or claimed on other people's events.
 
 #### Scenario: Host deletes account
 - **WHEN** a host confirms account deletion
@@ -42,6 +42,10 @@ The system SHALL let a signed-in host delete their account. Deleting an account 
 #### Scenario: Invite link after host deletion
 - **WHEN** a guest opens an invite link to an event whose host deleted their account
 - **THEN** the page shows that the event no longer exists and reveals no event details
+
+#### Scenario: Claimed responses removed with account
+- **WHEN** a user who claimed web responses deletes their account
+- **THEN** those responses are removed from the hosts' guest lists
 
 ### Requirement: Language
 The system SHALL present its UI in Swedish or English, chosen from the device or browser language, defaulting to English for other languages.
