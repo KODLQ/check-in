@@ -18,7 +18,7 @@ Each event SHALL have an invite link containing a random token that cannot pract
 - **THEN** a generic "invite not found" page is shown, identical for missing and revoked links
 
 ### Requirement: Web invite page
-Opening an invite link SHALL show the event in any modern mobile or desktop browser without installing the app or signing in. The page SHALL show title, cover, host name, date and time, location, and description.
+Opening an invite link SHALL show the event in any modern mobile or desktop browser without installing the app or signing in. The page SHALL show title, cover, host names (the owner first, then any co-hosts), date and time, location, and description.
 
 #### Scenario: Guest opens link in a chat app's browser
 - **WHEN** a guest taps the invite link inside iMessage, WhatsApp, Snapchat or Instagram
@@ -27,6 +27,10 @@ Opening an invite link SHALL show the event in any modern mobile or desktop brow
 #### Scenario: Add to calendar
 - **WHEN** a guest chooses "Add to calendar" on the invite page
 - **THEN** they get a calendar entry with the event's title, time and location
+
+#### Scenario: Event with co-hosts
+- **WHEN** a guest opens the invite of an event owned by Anna and co-hosted by Erik
+- **THEN** the page shows "Hosted by Anna & Erik"
 
 ### Requirement: Rich link previews
 Invite links SHALL provide link-preview metadata (title, date and time, host name, and a preview image) so chat apps show a rich card. Previews SHALL NOT include the guest list or the exact address.
@@ -40,18 +44,26 @@ Invite links SHALL provide link-preview metadata (title, date and time, host nam
 - **THEN** it does not include the free-text location or the guest list
 
 ### Requirement: Share from the app
-The app SHALL let the host share the invite link through the device share sheet and copy it to the clipboard.
+The app SHALL let the host and co-hosts share the invite link through the device share sheet and copy it to the clipboard.
 
 #### Scenario: Share via share sheet
 - **WHEN** a host taps Share on their event
 - **THEN** the native share sheet opens with the invite link and a short invite message
 
+#### Scenario: Co-host shares
+- **WHEN** a co-host taps Share on an event they co-host
+- **THEN** the native share sheet opens with the same active invite link
+
 ### Requirement: Revoke and regenerate link
-The host SHALL be able to revoke the invite link and get a new one. Revoked links SHALL stop working immediately. Guests who already responded SHALL keep their RSVP.
+The host and co-hosts SHALL be able to revoke the invite link and get a new one. Revoked links SHALL stop working immediately. Guests who already responded SHALL keep their RSVP.
 
 #### Scenario: Link leaked
 - **WHEN** a host regenerates the invite link
 - **THEN** the old link shows "invite not found", the new link works, and existing RSVPs are kept
+
+#### Scenario: Co-host regenerates
+- **WHEN** a co-host regenerates the invite link
+- **THEN** the old link shows "invite not found" and the owner and other co-hosts see the new link
 
 ### Requirement: Open in app when installed
 When the app is installed, opening an invite link on that device SHALL be able to open the event in the app; otherwise the web page SHALL be shown.

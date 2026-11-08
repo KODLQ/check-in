@@ -6,18 +6,22 @@ Lets the host post short updates on an event ("Bring a jacket, we're on the roof
 ## Requirements
 
 ### Requirement: Post announcement
-The host SHALL be able to post a text announcement of 1 to 500 characters on an event that has not ended and is not cancelled. Nobody else SHALL be able to post on it.
+The host and co-hosts SHALL be able to post a text announcement of 1 to 500 characters on an event that has not ended and is not cancelled. Nobody else SHALL be able to post on it.
 
 #### Scenario: Host posts
 - **WHEN** the host writes "Doors open 19:30, ring Andersson" and posts it
 - **THEN** the announcement is saved with the time it was posted and shown on the event
+
+#### Scenario: Co-host posts
+- **WHEN** a co-host posts an announcement on an event they co-host
+- **THEN** it is saved and shown on the event exactly as if the owner had posted it
 
 #### Scenario: Too long or empty
 - **WHEN** the host tries to post an empty announcement or one longer than 500 characters
 - **THEN** it is not posted and the limit is shown
 
 #### Scenario: Not the host
-- **WHEN** a guest or another signed-in user tries to post an announcement on the event
+- **WHEN** a guest, a former co-host or another signed-in user tries to post an announcement on the event
 - **THEN** it is rejected
 
 #### Scenario: Ended or cancelled event
@@ -54,7 +58,7 @@ A new announcement SHALL be delivered as a notification to guests who are Going 
 - **THEN** it shows the event title and the announcement text, in full in email and shortened in push
 
 ### Requirement: Delete announcement
-The host SHALL be able to delete an announcement. A deleted announcement SHALL disappear from the invite page and the app, and SHALL NOT be delivered to anyone who has not yet received it.
+The host and co-hosts SHALL be able to delete any announcement on the event. A deleted announcement SHALL disappear from the invite page and the app, and SHALL NOT be delivered to anyone who has not yet received it.
 
 #### Scenario: Deleted before delivery
 - **WHEN** the host deletes an announcement that is waiting for quiet hours to end
@@ -63,3 +67,7 @@ The host SHALL be able to delete an announcement. A deleted announcement SHALL d
 #### Scenario: Deleted after delivery
 - **WHEN** the host deletes an announcement that guests already received
 - **THEN** it disappears from the invite page and the app, and already-sent notifications are not recalled
+
+#### Scenario: Co-host deletes the owner's announcement
+- **WHEN** a co-host deletes an announcement the owner posted
+- **THEN** it disappears from the invite page and the app for everyone
