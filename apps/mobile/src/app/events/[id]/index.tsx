@@ -1,5 +1,6 @@
 import {
   formatOption,
+  formatRepeatRule,
   formatTimeRange,
   hasEventEnded,
   headCount,
@@ -24,6 +25,7 @@ import { PollResults } from '@/components/poll-results';
 import { StoryShareButton } from '@/components/story-share-button';
 import { Toast } from '@/components/toast';
 import { Body, Button, Card, HeaderButton, Label, Screen, Spinner, Title, Toggle, useColors } from '@/components/ui';
+import { showActionSheet } from '@/lib/action-sheet';
 import { useAuth } from '@/lib/auth';
 import { INVITE_BASE_URL } from '@/lib/config';
 import { errorKey, fetchActiveInvite } from '@/lib/events';
@@ -61,6 +63,12 @@ export default function EventDetail() {
   const [showCreated, setShowCreated] = useState(!!created);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const guestsY = useRef(0);
+  // Groups and repeating events (add-groups-and-recurring-events): owner rights (the host, or a group admin
+  // on a series date), the series rule, and who in the invited group has not answered.
+  const [ownerRights, setOwnerRights] = useState(false);
+  const [seriesAdmin, setSeriesAdmin] = useState(false);
+  const [series, setSeries] = useState<{ frequency: 'weekly' | 'biweekly' | 'monthly'; anchor_local_date: string; ends_on: string | null } | null>(null);
+  const [groupInfo, setGroupInfo] = useState<{ group_name: string; not_answered: number; member_user_ids: string[] } | null>(null);
 
   const loadAnnouncements = useCallback(async () => {
     const { data } = await supabase
@@ -83,8 +91,20 @@ export default function EventDetail() {
       return;
     }
     // Event and invite link appear together, so the share buttons don't pop in and shift the page.
-    const nextToken = await fetchActiveInvite(id);
+    const [nextToken, owner, admin, rule, summary] = await Promise.all([
+      fetchActiveInvite(id),
+      supabase.rpc('is_event_owner', { p_event_id: id }),
+      data.series_id ? supabase.rpc('is_series_admin', { p_series_id: data.series_id }) : Promise.resolve({ data: false }),
+      data.series_id
+        ? supabase.from('event_series').select('frequency, anchor_local_date, ends_on').eq('id', data.series_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      data.group_id ? supabase.rpc('group_event_summary', { p_event_id: id }) : Promise.resolve({ data: null }),
+    ]);
     setToken(nextToken);
+    setOwnerRights(!!owner?.data);
+    setSeriesAdmin(!!admin?.data);
+    setSeries((rule?.data as typeof series) ?? null);
+    setGroupInfo((summary?.data as unknown as typeof groupInfo) ?? null);
     setEvent(data);
     await Promise.all([
       loadRsvps(),
@@ -173,8 +193,35 @@ export default function EventDetail() {
     : t('polls.date_tbd');
   const ended = hasEventEnded(event.starts_at ? new Date(event.starts_at) : null, event.ends_at ? new Date(event.ends_at) : null);
   const editable = !ended && !event.cancelled_at;
-  // Owner-only actions (cancel, co-host management) are also enforced server-side.
-  const isOwner = !!userId && event.host_id === userId;
+  // Owner-only actions (cancel, co-host management) are also enforced server-side. A group admin has them
+  // on a date of the group's series too.
+  const isOwner = ownerRights || (!!userId && event.host_id === userId);
+  const ruleText = series ? formatRepeatRule(series.frequency, series.anchor_local_date, locale) : null;
+
+  async function repeatSettings() {
+    const options = (['weekly', 'biweekly', 'monthly'] as const).map((f) => ({ label: t(`series.${f}`), f }));
+    const index = await showActionSheet(options, { title: t('series.settings'), cancelLabel: t('common.cancel') });
+    if (index === null || !event?.series_id) return;
+    const { error } = await supabase.rpc('update_series_rule', {
+      p_series_id: event.series_id,
+      p_frequency: options[index]!.f,
+      // Null keeps the series open-ended (the generated type doesn't know the column is nullable).
+      p_ends_on: (series?.ends_on ?? null) as unknown as string,
+    });
+    setToast(error ? t(`errors.${errorKey(error)}`, t('common.error')) : t('series.rule_saved'));
+    await load();
+  }
+
+  async function endSeries() {
+    const index = await showActionSheet(
+      [{ label: t('series.end_keep') }, { label: t('series.end_cancel'), destructive: true }],
+      { title: `${t('series.end_title', { title: event?.title ?? '' })}\n${t('series.end_body')}`, cancelLabel: t('common.cancel') },
+    );
+    if (index === null || !event?.series_id) return;
+    const { error } = await supabase.rpc('end_series', { p_series_id: event.series_id, p_cancel_upcoming: index === 1 });
+    setToast(error ? t(`errors.${errorKey(error)}`, t('common.error')) : t('series.ended_toast'));
+    await load();
+  }
 
   async function share() {
     if (!link || !event) return;
@@ -328,6 +375,7 @@ export default function EventDetail() {
       : t('events.going_count', { count: goingHeads }),
     t('events.maybe_count', { count: maybeCount }),
     ...(waitlistHeads > 0 ? [t('events.waitlist_count', { count: waitlistHeads })] : []),
+    ...(groupInfo && groupInfo.not_answered > 0 ? [t('groups.not_answered_count', { count: groupInfo.not_answered })] : []),
   ].join(' · ');
 
   function scrollToGuests() {
@@ -375,6 +423,11 @@ export default function EventDetail() {
 
         <Cover coverPath={event.cover_path} theme={event.theme} height={200} />
         <Text style={{ fontSize: 28, fontWeight: '800', color: c.text }}>{event.title}</Text>
+        {groupInfo || ruleText ? (
+          <Text testID="event-group-line" style={{ color: c.muted, fontSize: 16, fontWeight: '600' }}>
+            {[groupInfo?.group_name, ruleText].filter(Boolean).join(' · ')}
+          </Text>
+        ) : null}
         {event.cancelled_at ? <Text style={{ color: c.danger, fontWeight: '700' }}>{t('events.cancelled')}</Text> : null}
         <Body>{when}</Body>
         <Pressable
@@ -476,6 +529,7 @@ export default function EventDetail() {
 
           {pending ? null : (
             <GuestList
+              memberIds={groupInfo ? new Set(groupInfo.member_user_ids) : undefined}
               rsvps={rsvps}
               capacity={event.capacity}
               editable={editable}
@@ -498,12 +552,18 @@ export default function EventDetail() {
         {editable ? (
           <View style={{ gap: 10, marginTop: 12 }}>
             <Button variant="secondary" title={t('events.regenerate_link')} onPress={confirmRegenerate} />
+            {seriesAdmin ? (
+              <>
+                <Button testID="repeat-settings" variant="secondary" title={t('series.settings')} onPress={() => void repeatSettings()} />
+                <Button testID="end-series" variant="secondary" title={t('series.end')} onPress={() => void endSeries()} />
+              </>
+            ) : null}
             {isOwner ? (
               <Button testID="cancel-event" variant="danger" title={t('events.cancel_event')} onPress={confirmCancel} />
             ) : null}
           </View>
         ) : null}
-        {!isOwner ? (
+        {!isOwner && !seriesAdmin ? (
           <Button testID="leave-co-host" variant="ghost" title={t('co_hosts.leave')} onPress={confirmLeave} />
         ) : null}
       </KeyboardScroll>

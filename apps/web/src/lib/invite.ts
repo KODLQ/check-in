@@ -8,8 +8,7 @@ import {
   type Locale,
   type MyVotes,
   type RsvpState,
-  type RsvpStatus,
-} from '@check-in/shared';
+  type RsvpStatus, type RepeatFrequency } from '@check-in/shared';
 import { cache } from 'react';
 
 import { publicClient } from './supabase';
@@ -67,11 +66,22 @@ export interface Announcement {
   created_at: string;
 }
 
+/** A date of a group's repeating event (add-groups-and-recurring-events). */
+export interface InviteSeries {
+  frequency: RepeatFrequency;
+  anchor_local_date: string;
+  /** The next date that isn't cancelled, with its own invite link. */
+  next: { event_id: string; starts_at: string; token: string | null } | null;
+}
+
 /** Host names shown to guests (add-co-hosts). */
 interface InviteHosts {
   host: { display_name: string | null; avatar_path: string | null };
   /** Co-host display names, in the order they joined (add-co-hosts). */
   co_hosts?: { display_name: string | null }[];
+  /** Series dates are hosted by the group (add-groups-and-recurring-events). */
+  group?: { name: string } | null;
+  series?: InviteSeries | null;
 }
 
 export type Invite =
@@ -92,6 +102,8 @@ export type Invite =
       host: { display_name: string | null; avatar_path: string | null };
       /** Co-host display names, in the order they joined (add-co-hosts). */
       co_hosts?: { display_name: string | null }[];
+      group?: { name: string } | null;
+      series?: InviteSeries | null;
       counts: InviteCounts;
       /** Going and Maybe only; waitlisted guests are never listed. */
       guests: { display_name: string; status: RsvpStatus; plus_ones: number }[] | null;
@@ -101,12 +113,24 @@ export type Invite =
 
 export const GUEST_COOKIE = 'ci_guest';
 
-/** "Hosted by Anna & Erik" — owner first, then co-hosts in join order (spec: co-hosts). */
+/**
+ * "Hosted by Anna & Erik" — owner first, then co-hosts in join order (spec: co-hosts). A series date is
+ * hosted by its group: "Hosted by AW crew · Anna" (spec: recurring-events "Group shown as host").
+ */
 export function hostedByLine(
-  invite: { host: { display_name: string | null }; co_hosts?: { display_name: string | null }[] },
+  invite: {
+    host: { display_name: string | null };
+    co_hosts?: { display_name: string | null }[];
+    group?: { name: string } | null;
+  },
   locale: Locale,
   t: (key: string, vars?: Record<string, string>) => string,
 ): string {
+  if (invite.group) {
+    return t('invite.hosted_by', {
+      name: t('series.hosted_by_group', { group: invite.group.name, name: invite.host.display_name ?? '' }),
+    });
+  }
   const coHosts = (invite.co_hosts ?? []).map((h) => h.display_name);
   const key = hostedByKey(invite.host.display_name, coHosts);
   return t(`invite.${key}`, { name: formatHostNames(invite.host.display_name, coHosts, locale) });

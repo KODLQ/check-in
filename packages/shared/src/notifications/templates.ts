@@ -23,7 +23,13 @@ export interface NotificationEvent {
 }
 
 export interface RenderContext {
-  event: NotificationEvent;
+  /** Null for group membership kinds (group_invited, group_joined, group_new_owner). */
+  event: NotificationEvent | null;
+  group?: { id: string; name: string } | null;
+  /** The member who acted (e.g. who sent a group invitation). */
+  actorName?: string | null;
+  /** group_joined: everyone who joined within the digest window. */
+  joinedNames?: string[] | null;
   hostName?: string | null;
   payload?: { changed?: string[] } & Record<string, unknown>;
   announcement?: { body: string | null } | null;
@@ -76,18 +82,21 @@ export function truncate(text: string, max: number): string {
 
 function when(ctx: RenderContext, locale: NotificationLocale): string {
   const e = ctx.event;
+  if (!e) return '';
   if (!e.starts_at) return translate(locale, 'polls.date_tbd');
   return formatTimeRange(new Date(e.starts_at), e.ends_at ? new Date(e.ends_at) : null, locale, e.time_zone);
 }
 
 function where(ctx: RenderContext): string {
-  return ctx.event.location_text;
+  return ctx.event?.location_text ?? '';
 }
 
 function vars(ctx: RenderContext, locale: NotificationLocale) {
   return {
-    title: ctx.event.title,
+    title: ctx.event?.title ?? '',
     host: ctx.hostName ?? '',
+    group: ctx.group?.name ?? '',
+    actor: ctx.actorName ?? '',
     when: when(ctx, locale),
     where: where(ctx),
   };
@@ -100,6 +109,17 @@ function changeLines(ctx: RenderContext, locale: NotificationLocale): string[] {
   if (changed.includes('time')) lines.push(translate(locale, 'notifications.event_changed.time', v));
   if (changed.includes('location')) lines.push(translate(locale, 'notifications.event_changed.location', v));
   return lines;
+}
+
+function joinedBody(ctx: RenderContext, locale: NotificationLocale): string {
+  const names = ctx.joinedNames ?? [];
+  if (names.length <= 1) return translate(locale, 'notifications.group_joined.one', { name: names[0] ?? '' });
+  const shown = names.slice(0, 3).join(', ');
+  const rest = names.length - 3;
+  return translate(locale, 'notifications.group_joined.many', {
+    count: names.length,
+    names: rest > 0 ? `${shown} ${translate(locale, 'notifications.rsvp_digest.more', { count: rest })}` : shown,
+  });
 }
 
 function digestBody(ctx: RenderContext, locale: NotificationLocale): string {
@@ -214,6 +234,36 @@ export const TEMPLATES: Record<NotificationKind, KindTemplate> = {
       };
     },
   },
+  group_invited: {
+    push: (ctx, l) => ({
+      title: translate(l, 'notifications.group_invited.title', vars(ctx, l)),
+      body: translate(l, 'notifications.group_invited.body', vars(ctx, l)),
+    }),
+  },
+  group_joined: {
+    push: (ctx, l) => ({
+      title: translate(l, 'notifications.group_joined.title', vars(ctx, l)),
+      body: joinedBody(ctx, l),
+    }),
+  },
+  group_new_owner: {
+    push: (ctx, l) => ({
+      title: translate(l, 'notifications.group_new_owner.title', vars(ctx, l)),
+      body: translate(l, 'notifications.group_new_owner.body', vars(ctx, l)),
+    }),
+  },
+  group_date_open: {
+    push: (ctx, l) => ({
+      title: translate(l, 'notifications.group_date_open.title', vars(ctx, l)),
+      body: translate(l, 'notifications.group_date_open.body', vars(ctx, l)),
+    }),
+  },
+  group_answer_reminder: {
+    push: (ctx, l) => ({
+      title: translate(l, 'notifications.group_answer_reminder.title', vars(ctx, l)),
+      body: translate(l, 'notifications.group_answer_reminder.body', vars(ctx, l)),
+    }),
+  },
 };
 
 export function renderPush(kind: NotificationKind, locale: string | null | undefined, ctx: PushContext): PushMessage {
@@ -235,7 +285,7 @@ export function renderEmail(kind: NotificationKind, locale: string | null | unde
   const { subject, paragraphs } = template(ctx, l);
   return renderEmailLayout({
     subject,
-    heading: ctx.event.title,
+    heading: ctx.event?.title ?? '',
     paragraphs,
     cta: ctx.inviteUrl ? { label: translate(l, 'notifications.email.view_invite'), url: ctx.inviteUrl } : null,
     footer: translate(l, 'notifications.email.footer'),

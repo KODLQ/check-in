@@ -362,6 +362,116 @@ exports[`notification templates > push event_reminder sv 1`] = `
 }
 `;
 
+exports[`notification templates > push group_answer_reminder en 1`] = `
+{
+  "body": "Fri 11 Dec, 19:00 · You haven't answered yet.",
+  "data": {
+    "kind": "group_answer_reminder",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Coming to Fredagshäng?",
+}
+`;
+
+exports[`notification templates > push group_answer_reminder sv 1`] = `
+{
+  "body": "fre 11 dec. 19:00 · Du har inte svarat än.",
+  "data": {
+    "kind": "group_answer_reminder",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Kommer du till Fredagshäng?",
+}
+`;
+
+exports[`notification templates > push group_date_open en 1`] = `
+{
+  "body": "Fri 11 Dec, 19:00 · Hornsgatan 12",
+  "data": {
+    "kind": "group_date_open",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng: are you in?",
+}
+`;
+
+exports[`notification templates > push group_date_open sv 1`] = `
+{
+  "body": "fre 11 dec. 19:00 · Hornsgatan 12",
+  "data": {
+    "kind": "group_date_open",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng: är du med?",
+}
+`;
+
+exports[`notification templates > push group_invited en 1`] = `
+{
+  "body": "Open the app to join or decline.",
+  "data": {
+    "kind": "group_invited",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Anna invited you to AW crew",
+}
+`;
+
+exports[`notification templates > push group_invited sv 1`] = `
+{
+  "body": "Öppna appen för att gå med eller tacka nej.",
+  "data": {
+    "kind": "group_invited",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Anna bjöd in dig till AW crew",
+}
+`;
+
+exports[`notification templates > push group_joined en 1`] = `
+{
+  "body": "2 people joined: Erik, Sara",
+  "data": {
+    "kind": "group_joined",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "AW crew",
+}
+`;
+
+exports[`notification templates > push group_joined sv 1`] = `
+{
+  "body": "2 personer gick med: Erik, Sara",
+  "data": {
+    "kind": "group_joined",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "AW crew",
+}
+`;
+
+exports[`notification templates > push group_new_owner en 1`] = `
+{
+  "body": "You manage the group and its repeating events.",
+  "data": {
+    "kind": "group_new_owner",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "You now own AW crew",
+}
+`;
+
+exports[`notification templates > push group_new_owner sv 1`] = `
+{
+  "body": "Du sköter gruppen och dess återkommande event.",
+  "data": {
+    "kind": "group_new_owner",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Du äger nu AW crew",
+}
+`;
+
 exports[`notification templates > push rsvp_digest en 1`] = `
 {
   "body": "5 new replies: Alva (Going), Elias (Maybe), Maja (Can't go) +2 more",

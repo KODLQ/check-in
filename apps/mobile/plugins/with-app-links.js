@@ -1,4 +1,4 @@
-// Universal links (iOS) and verified app links (Android) for invite (/i/*) and co-host (/c/*) URLs.
+// Universal links (iOS) and verified app links (Android) for invite (/i/*), co-host (/c/*) and group (/g/*) URLs.
 // app.json carries the placeholder host; set APP_LINK_HOST (or an https EXPO_PUBLIC_INVITE_BASE_URL) at
 // prebuild time to use the real domain. Android verification also needs the release signing certificate's
 // SHA-256 in the web app's ANDROID_SHA256_CERT_FINGERPRINT (see README).

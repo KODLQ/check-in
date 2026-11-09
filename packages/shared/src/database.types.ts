@@ -193,21 +193,163 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"events": {
+                },"event_series": {
                   Row: {
-                    "allow_plus_ones": boolean,"cancelled_at": string | null,"capacity": number | null,"cover_path": string | null,"created_at": string,"date_picked_at": string | null,"description": string | null,"ends_at": string | null,"guest_list_visible": boolean,"host_id": string,"id": string,"latitude": number | null,"location_point": unknown,"location_text": string,"longitude": number | null,"max_plus_ones": number,"place_name": string | null,"poll_closes_at": string | null,"starts_at": string | null,"theme": string,"time_changed_at": string | null,"time_zone": string,"title": string,"updated_at": string,"wall_enabled": boolean,"event_ended_at": string | null
+                    "allow_plus_ones": boolean,"anchor_index": number,"anchor_local_date": string,"capacity": number | null,"cover_path": string | null,"created_at": string,"created_by": string | null,"description": string | null,"duration": string | null,"ended_at": string | null,"ends_on": string | null,"frequency": string,"group_id": string,"guest_list_visible": boolean,"id": string,"latitude": number | null,"local_start_time": string,"location_text": string,"longitude": number | null,"max_plus_ones": number,"next_index": number,"place_name": string | null,"theme": string,"time_zone": string,"title": string,"updated_at": string,"wall_enabled": boolean
                   }
-                  ComputedFields: "event_ended_at"
+                  ComputedFields: never
                   Insert: {
-                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text": string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"poll_closes_at"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title": string,"updated_at"?: string,"wall_enabled"?: boolean
+                    "allow_plus_ones"?: boolean,"anchor_index"?: number,"anchor_local_date": string,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"duration"?: string | null,"ended_at"?: string | null,"ends_on"?: string | null,"frequency": string,"group_id": string,"guest_list_visible"?: boolean,"id"?: string,"latitude"?: number | null,"local_start_time": string,"location_text": string,"longitude"?: number | null,"max_plus_ones"?: number,"next_index"?: number,"place_name"?: string | null,"theme"?: string,"time_zone"?: string,"title": string,"updated_at"?: string,"wall_enabled"?: boolean
                   }
                   Update: {
-                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text"?: string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"poll_closes_at"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title"?: string,"updated_at"?: string,"wall_enabled"?: boolean
+                    "allow_plus_ones"?: boolean,"anchor_index"?: number,"anchor_local_date"?: string,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"duration"?: string | null,"ended_at"?: string | null,"ends_on"?: string | null,"frequency"?: string,"group_id"?: string,"guest_list_visible"?: boolean,"id"?: string,"latitude"?: number | null,"local_start_time"?: string,"location_text"?: string,"longitude"?: number | null,"max_plus_ones"?: number,"next_index"?: number,"place_name"?: string | null,"theme"?: string,"time_zone"?: string,"title"?: string,"updated_at"?: string,"wall_enabled"?: boolean
                   }
                   Relationships: [
                     {
+      foreignKeyName: "event_series_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "event_series_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"events": {
+                  Row: {
+                    "allow_plus_ones": boolean,"cancelled_at": string | null,"capacity": number | null,"cover_path": string | null,"created_at": string,"date_picked_at": string | null,"description": string | null,"ends_at": string | null,"group_id": string | null,"guest_list_visible": boolean,"host_id": string,"id": string,"latitude": number | null,"location_point": unknown,"location_text": string,"longitude": number | null,"max_plus_ones": number,"occurrence_index": number | null,"place_name": string | null,"poll_closes_at": string | null,"series_id": string | null,"starts_at": string | null,"theme": string,"time_changed_at": string | null,"time_zone": string,"title": string,"updated_at": string,"wall_enabled": boolean,"event_ended_at": string | null
+                  }
+                  ComputedFields: "event_ended_at"
+                  Insert: {
+                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"group_id"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text": string,"longitude"?: number | null,"max_plus_ones"?: number,"occurrence_index"?: number | null,"place_name"?: string | null,"poll_closes_at"?: string | null,"series_id"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title": string,"updated_at"?: string,"wall_enabled"?: boolean
+                  }
+                  Update: {
+                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"group_id"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text"?: string,"longitude"?: number | null,"max_plus_ones"?: number,"occurrence_index"?: number | null,"place_name"?: string | null,"poll_closes_at"?: string | null,"series_id"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title"?: string,"updated_at"?: string,"wall_enabled"?: boolean
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "events_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "events_host_id_fkey"
       columns: ["host_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "events_series_id_fkey"
+      columns: ["series_id"]
+isOneToOne: false
+      referencedRelation: "event_series"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"group_invitations": {
+                  Row: {
+                    "created_at": string,"declined_at": string | null,"expires_at": string,"group_id": string,"invited_by": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"declined_at"?: string | null,"expires_at"?: string,"group_id": string,"invited_by"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"declined_at"?: string | null,"expires_at"?: string,"group_id"?: string,"invited_by"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "group_invitations_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "group_invitations_invited_by_fkey"
+      columns: ["invited_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "group_invitations_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"group_invite_links": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"group_id": string,"revoked_at": string | null,"token": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"group_id": string,"revoked_at"?: string | null,"token"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"group_id"?: string,"revoked_at"?: string | null,"token"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "group_invite_links_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "group_invite_links_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"group_members": {
+                  Row: {
+                    "group_id": string,"is_admin": boolean,"joined_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "group_id": string,"is_admin"?: boolean,"joined_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "group_id"?: string,"is_admin"?: boolean,"joined_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "group_members_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "group_members_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"groups": {
+                  Row: {
+                    "created_at": string,"id": string,"name": string,"owner_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"name": string,"owner_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"name"?: string,"owner_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "groups_owner_id_fkey"
+      columns: ["owner_id"]
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
@@ -552,6 +694,9 @@ isOneToOne: false
             "accept_co_host_invite":
 { Args: { "p_token": string }; Returns: string
                            },
+"add_group_member":
+{ Args: { "p_group_id": string,"p_user_id": string }; Returns: undefined
+                           },
 "apply_quiet_hours":
 { Args: { "p_ts": string,"p_urgent": boolean }; Returns: string
                            },
@@ -561,6 +706,9 @@ isOneToOne: false
 "can_read_voter":
 { Args: { "p_voter_id": string }; Returns: boolean
                            },
+"can_see_event_as_guest":
+{ Args: { "p_event_id": string,"p_user_id": string }; Returns: boolean
+                           },
 "cancel_event_notifications":
 { Args: { "p_event_id": string,"p_except_kind"?: string }; Returns: number
                            },
@@ -569,6 +717,9 @@ isOneToOne: false
                            },
 "claim_guest_rsvps":
 { Args: { "p_ticket": string }; Returns: Json
+                           },
+"clean_group_name":
+{ Args: { "p_name": string }; Returns: string
                            },
 "co_host_slots_used":
 { Args: { "p_event_id": string,"p_now"?: string }; Returns: number
@@ -582,11 +733,23 @@ isOneToOne: false
 "create_co_host_invite":
 { Args: { "p_event_id": string }; Returns: string
                            },
+"create_group":
+{ Args: { "p_name": string }; Returns: string
+                           },
+"create_group_link":
+{ Args: { "p_group_id": string }; Returns: string
+                           },
 "create_poll_event":
 { Args: { "p_closes_at"?: string,"p_event": Json,"p_options": Json }; Returns: Json
                            },
+"create_series":
+{ Args: { "p_ends_on"?: string,"p_event": Json,"p_frequency": string,"p_group_id": string }; Returns: Json
+                           },
 "delete_announcement":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"delete_group":
+{ Args: { "p_group_id": string }; Returns: undefined
                            },
 "delivery_backoff":
 { Args: { "p_attempts": number }; Returns: string
@@ -602,8 +765,20 @@ isOneToOne: false
 "email_consent_version":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"end_group_series":
+{ Args: { "p_group_id": string }; Returns: undefined
+                           },
+"end_series":
+{ Args: { "p_cancel_upcoming": boolean,"p_series_id": string }; Returns: undefined
+                           },
+"end_series_now":
+{ Args: { "p_cancel_upcoming": boolean,"p_series_id": string }; Returns: undefined
+                           },
 "enqueue_notification":
 { Args: { "p_audience": string,"p_coalesce_key"?: string,"p_coalesce_mode"?: string,"p_dedupe_key"?: string,"p_event_id": string,"p_exclude_user_id"?: string,"p_kind": string,"p_not_before"?: string,"p_payload"?: Json,"p_subject_id"?: string,"p_target_rsvp_id"?: string,"p_target_user_id"?: string }; Returns: string
+                           },
+"ensure_series_dates":
+{ Args: { "p_limit"?: number,"p_now"?: string,"p_quiet"?: boolean,"p_series_id": string }; Returns: number
                            },
 "event_ended_at":
 { Args: { "e": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']> }; Returns: string
@@ -629,11 +804,32 @@ isOneToOne: false
 "get_co_host_invite_preview":
 { Args: { "p_token": string }; Returns: Json
                            },
+"get_group":
+{ Args: { "p_group_id": string }; Returns: Json
+                           },
+"get_group_link_preview":
+{ Args: { "p_token": string }; Returns: Json
+                           },
 "get_invite":
 { Args: { "p_guest_token"?: string,"p_token": string }; Returns: Json
                            },
 "get_my_invite":
 { Args: { "p_event_id": string }; Returns: Json
+                           },
+"group_event_summary":
+{ Args: { "p_event_id": string }; Returns: Json
+                           },
+"group_role":
+{ Args: { "g": Omit<Database["public"]['Tables']["groups"]['Row'], Database["public"]['Tables']["groups"]['ComputedFields']>,"p_user_id": string }; Returns: string
+                           },
+"group_seats_used":
+{ Args: { "p_group_id": string,"p_now"?: string }; Returns: number
+                           },
+"group_successor":
+{ Args: { "p_group_id": string }; Returns: string
+                           },
+"hand_over_and_leave_group":
+{ Args: { "p_group_id": string,"p_new_owner": string }; Returns: undefined
                            },
 "hash_claim_ticket":
 { Args: { "p_ticket": string }; Returns: string
@@ -644,8 +840,17 @@ isOneToOne: false
 "hit_rate_limit":
 { Args: { "p_bucket": string,"p_max": number,"p_now"?: string,"p_window_seconds": number }; Returns: boolean
                            },
+"invitable_past_guests":
+{ Args: { "p_group_id": string }; Returns: Json
+                           },
 "invite_payload":
 { Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"me": Omit<Database["public"]['Tables']["rsvps"]['Row'], Database["public"]['Tables']["rsvps"]['ComputedFields']>,"p_guest_device"?: boolean,"p_voter_hash"?: string }; Returns: Json
+                           },
+"invite_payload_core":
+{ Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"me": Omit<Database["public"]['Tables']["rsvps"]['Row'], Database["public"]['Tables']["rsvps"]['ComputedFields']>,"p_guest_device"?: boolean,"p_voter_hash"?: string }; Returns: Json
+                           },
+"invite_to_group":
+{ Args: { "p_group_id": string,"p_user_ids": (string)[] }; Returns: number
                            },
 "is_event_co_host":
 { Args: { "p_event_id": string }; Returns: boolean
@@ -662,16 +867,37 @@ isOneToOne: false
 "is_event_owner":
 { Args: { "p_event_id": string }; Returns: boolean
                            },
+"is_group_admin":
+{ Args: { "p_group_id": string,"p_user_id"?: string }; Returns: boolean
+                           },
+"is_group_member":
+{ Args: { "p_group_id": string,"p_user_id"?: string }; Returns: boolean
+                           },
+"is_series_admin":
+{ Args: { "p_series_id": string,"p_user_id"?: string }; Returns: boolean
+                           },
+"join_group_by_link":
+{ Args: { "p_token": string }; Returns: string
+                           },
 "kick_notifications_worker":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "leave_event":
 { Args: { "p_event_id": string }; Returns: boolean
                            },
+"leave_group":
+{ Args: { "p_group_id": string }; Returns: undefined
+                           },
 "list_event_hosts":
 { Args: { "p_event_id": string }; Returns: {
               "added_at": string,"avatar_path": string,"display_name": string,"role": string,"user_id": string
             }[]
+                           },
+"list_group_series":
+{ Args: { "p_group_id": string }; Returns: Json
+                           },
+"list_my_groups":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "list_my_invites":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -686,6 +912,7 @@ isOneToOne: false
 "date_picked_at": string | null,
 "description": string | null,
 "ends_at": string | null,
+"group_id": string | null,
 "guest_list_visible": boolean,
 "host_id": string,
 "id": string,
@@ -694,8 +921,10 @@ isOneToOne: false
 "location_text": string,
 "longitude": number | null,
 "max_plus_ones": number,
+"occurrence_index": number | null,
 "place_name": string | null,
 "poll_closes_at": string | null,
+"series_id": string | null,
 "starts_at": string | null,
 "theme": string,
 "time_changed_at": string | null,
@@ -720,6 +949,7 @@ isOneToOne: false
 "date_picked_at": string | null,
 "description": string | null,
 "ends_at": string | null,
+"group_id": string | null,
 "guest_list_visible": boolean,
 "host_id": string,
 "id": string,
@@ -728,8 +958,10 @@ isOneToOne: false
 "location_text": string,
 "longitude": number | null,
 "max_plus_ones": number,
+"occurrence_index": number | null,
 "place_name": string | null,
 "poll_closes_at": string | null,
+"series_id": string | null,
 "starts_at": string | null,
 "theme": string,
 "time_changed_at": string | null,
@@ -741,6 +973,19 @@ isOneToOne: false
                           SetofOptions: {
         from: "*"
         to: "events"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"lock_group_for":
+{ Args: { "p_group_id": string,"p_role": string }; Returns: {
+              "created_at": string,
+"id": string,
+"name": string,
+"owner_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "groups"
         isOneToOne: true
         isSetofReturn: false
       } },
@@ -754,6 +999,7 @@ isOneToOne: false
 "date_picked_at": string | null,
 "description": string | null,
 "ends_at": string | null,
+"group_id": string | null,
 "guest_list_visible": boolean,
 "host_id": string,
 "id": string,
@@ -762,8 +1008,10 @@ isOneToOne: false
 "location_text": string,
 "longitude": number | null,
 "max_plus_ones": number,
+"occurrence_index": number | null,
 "place_name": string | null,
 "poll_closes_at": string | null,
+"series_id": string | null,
 "starts_at": string | null,
 "theme": string,
 "time_changed_at": string | null,
@@ -778,13 +1026,94 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"lock_series":
+{ Args: { "p_series_id": string }; Returns: {
+              "allow_plus_ones": boolean,
+"anchor_index": number,
+"anchor_local_date": string,
+"capacity": number | null,
+"cover_path": string | null,
+"created_at": string,
+"created_by": string | null,
+"description": string | null,
+"duration": string | null,
+"ended_at": string | null,
+"ends_on": string | null,
+"frequency": string,
+"group_id": string,
+"guest_list_visible": boolean,
+"id": string,
+"latitude": number | null,
+"local_start_time": string,
+"location_text": string,
+"longitude": number | null,
+"max_plus_ones": number,
+"next_index": number,
+"place_name": string | null,
+"theme": string,
+"time_zone": string,
+"title": string,
+"updated_at": string,
+"wall_enabled": boolean
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "event_series"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"lock_series_for_event":
+{ Args: { "p_event_id": string }; Returns: {
+              "allow_plus_ones": boolean,
+"anchor_index": number,
+"anchor_local_date": string,
+"capacity": number | null,
+"cover_path": string | null,
+"created_at": string,
+"created_by": string | null,
+"description": string | null,
+"duration": string | null,
+"ended_at": string | null,
+"ends_on": string | null,
+"frequency": string,
+"group_id": string,
+"guest_list_visible": boolean,
+"id": string,
+"latitude": number | null,
+"local_start_time": string,
+"location_text": string,
+"longitude": number | null,
+"max_plus_ones": number,
+"next_index": number,
+"place_name": string | null,
+"theme": string,
+"time_zone": string,
+"title": string,
+"updated_at": string,
+"wall_enabled": boolean
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "event_series"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "mask_email":
 { Args: { "p_email": string }; Returns: string
+                           },
+"max_active_series":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "max_announcements_per_day":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "max_co_hosts":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"max_group_members":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"max_owned_groups":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "max_poll_options":
@@ -798,6 +1127,9 @@ isOneToOne: false
                            },
 "min_poll_options":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"move_group_series_owner":
+{ Args: { "p_group_id": string,"p_new_owner": string }; Returns: undefined
                            },
 "my_votes_json":
 { Args: { "p_voter_id": string }; Returns: Json
@@ -839,6 +1171,7 @@ isOneToOne: false
 "date_picked_at": string | null,
 "description": string | null,
 "ends_at": string | null,
+"group_id": string | null,
 "guest_list_visible": boolean,
 "host_id": string,
 "id": string,
@@ -847,8 +1180,10 @@ isOneToOne: false
 "location_text": string,
 "longitude": number | null,
 "max_plus_ones": number,
+"occurrence_index": number | null,
 "place_name": string | null,
 "poll_closes_at": string | null,
+"series_id": string | null,
 "starts_at": string | null,
 "theme": string,
 "time_changed_at": string | null,
@@ -863,6 +1198,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"pass_on_owned_groups":
+{ Args: { "p_user_id": string }; Returns: undefined
+                           },
 "pick_poll_option":
 { Args: { "p_option_id": string }; Returns: Json
                            },
@@ -893,11 +1231,26 @@ isOneToOne: false
 "remove_co_host":
 { Args: { "p_event_id": string,"p_user_id": string }; Returns: boolean
                            },
+"remove_group_member":
+{ Args: { "p_group_id": string,"p_user_id": string }; Returns: undefined
+                           },
 "remove_rsvp":
 { Args: { "p_rsvp_id": string }; Returns: boolean
                            },
+"rename_group":
+{ Args: { "p_group_id": string,"p_name": string }; Returns: undefined
+                           },
+"require_uid":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"respond_group_invitation":
+{ Args: { "p_accept": boolean,"p_group_id": string }; Returns: undefined
+                           },
 "revoke_co_host_invite":
 { Args: { "p_token": string }; Returns: undefined
+                           },
+"revoke_group_link":
+{ Args: { "p_group_id": string }; Returns: undefined
                            },
 "rsvp_as_user":
 { Args: { "p_plus_ones"?: number,"p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
@@ -907,6 +1260,9 @@ isOneToOne: false
                            },
 "run_retention":
 { Args: { "p_now"?: string }; Returns: undefined
+                           },
+"run_series_dates":
+{ Args: { "p_now"?: string }; Returns: number
                            },
 "save_ballot_locked":
 { Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"p_display_name": string,"p_guest_hash": string,"p_user_id": string,"p_votes": Json }; Returns: Json
@@ -934,11 +1290,26 @@ isOneToOne: false
 "schedule_event_reminder":
 { Args: { "p_event": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"p_now"?: string }; Returns: string
                            },
+"series_date_start":
+{ Args: { "k": number,"s": Omit<Database["public"]['Tables']["event_series"]['Row'], Database["public"]['Tables']["event_series"]['ComputedFields']> }; Returns: string
+                           },
+"series_local_date":
+{ Args: { "k": number,"s": Omit<Database["public"]['Tables']["event_series"]['Row'], Database["public"]['Tables']["event_series"]['ComputedFields']> }; Returns: string
+                           },
+"series_upcoming_dates":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"set_group_admin":
+{ Args: { "p_admin": boolean,"p_group_id": string,"p_user_id": string }; Returns: undefined
+                           },
 "set_my_rsvp":
 { Args: { "p_event_id": string,"p_plus_ones"?: number,"p_status": Database["public"]['Enums']["rsvp_status"] }; Returns: Json
                            },
 "set_poll_options":
 { Args: { "p_closes_at"?: string,"p_event_id": string,"p_options": Json }; Returns: number
+                           },
+"set_series_rpc":
+{ Args: { "p_on": boolean }; Returns: undefined
                            },
 "storage_queue_claim":
 { Args: { "p_limit"?: number,"p_now"?: string }; Returns: {
@@ -954,6 +1325,9 @@ isOneToOne: false
 "submit_votes":
 { Args: { "p_display_name": string,"p_guest_token": string,"p_token": string,"p_votes": Json }; Returns: Json
                            },
+"transfer_group_ownership":
+{ Args: { "p_enforce_limit": boolean,"p_group_id": string,"p_new_owner": string }; Returns: undefined
+                           },
 "try_uuid":
 { Args: { "p_text": string }; Returns: string
                            },
@@ -963,8 +1337,17 @@ isOneToOne: false
 "unsubscribe_email":
 { Args: { "p_token": string }; Returns: undefined
                            },
+"update_series_from":
+{ Args: { "p_event_id": string,"p_patch": Json }; Returns: number
+                           },
+"update_series_rule":
+{ Args: { "p_ends_on": string,"p_frequency": string,"p_series_id": string }; Returns: undefined
+                           },
 "upsert_rsvp":
 { Args: { "p_display_name": string,"p_email"?: string,"p_email_action"?: string,"p_email_hash"?: string,"p_guest_token": string,"p_locale"?: string,"p_plus_ones"?: number,"p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
+                           },
+"valid_cover_for":
+{ Args: { "p_cover": string,"p_event_id"?: string,"p_uid": string }; Returns: boolean
                            },
 "validate_poll_options":
 { Args: { "p_closes_at": string,"p_keep"?: (string)[],"p_old_closes_at"?: string,"p_options": Json }; Returns: undefined
@@ -1017,6 +1400,7 @@ isOneToOne: false
 "date_picked_at": string | null,
 "description": string | null,
 "ends_at": string | null,
+"group_id": string | null,
 "guest_list_visible": boolean,
 "host_id": string,
 "id": string,
@@ -1025,8 +1409,10 @@ isOneToOne: false
 "location_text": string,
 "longitude": number | null,
 "max_plus_ones": number,
+"occurrence_index": number | null,
 "place_name": string | null,
 "poll_closes_at": string | null,
+"series_id": string | null,
 "starts_at": string | null,
 "theme": string,
 "time_changed_at": string | null,

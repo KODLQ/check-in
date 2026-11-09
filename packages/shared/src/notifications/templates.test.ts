@@ -15,6 +15,9 @@ const ctx: EmailContext = {
     location_text: 'Hornsgatan 12',
   },
   hostName: 'Demo Host',
+  group: { id: 'g1', name: 'AW crew' },
+  actorName: 'Anna',
+  joinedNames: ['Erik', 'Sara'],
   payload: { changed: ['time', 'location'] },
   announcement: { body: 'Doors open 19:30, ring Andersson' },
   replies: [
@@ -97,7 +100,7 @@ describe('notification templates', () => {
   });
 
   it('says "Date TBD" instead of a time while a poll is open', () => {
-    const pending = { ...ctx, event: { ...ctx.event, starts_at: null, ends_at: null } };
+    const pending = { ...ctx, event: { ...ctx.event!, starts_at: null, ends_at: null } };
     expect(renderEmail('event_cancelled', 'en', pending).text).toContain('planned for Date TBD');
   });
 

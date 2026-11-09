@@ -1,4 +1,5 @@
-// Deletes the calling user's account (spec: user-accounts / Account deletion).
+// Deletes the calling user's account (spec: user-accounts / Account deletion). Owned groups are handed over
+// first (pass_on_owned_groups); the profiles trigger repeats that as a safety net.
 // Database rows cascade from auth.users -> profiles -> events -> invites/rsvps/co-hosts, and the user's
 // own co-host memberships are removed while events they only co-host stay (add-co-hosts).
 // Storage objects don't cascade, so we remove the user's folders explicitly: their own covers/avatars
@@ -24,6 +25,11 @@ Deno.serve(async (req) => {
   const { data: userData, error: userError } = await admin.auth.getUser(jwt);
   if (userError || !userData.user) return new Response('Unauthorized', { status: 401, headers: cors });
   const userId = userData.user.id;
+
+  // Groups the user owns (with their series' dates) pass to the longest-standing admin, else member, first
+  // (add-groups-and-recurring-events). Those dates are no longer "owned" below, so their covers stay.
+  const { error: passError } = await admin.rpc('pass_on_owned_groups', { p_user_id: userId });
+  if (passError) return new Response(JSON.stringify({ error: passError.message }), { status: 500, headers: cors });
 
   const { data: owned, error: ownedError } = await admin.from('events').select('id').eq('host_id', userId);
   if (ownedError) return new Response(JSON.stringify({ error: ownedError.message }), { status: 500, headers: cors });

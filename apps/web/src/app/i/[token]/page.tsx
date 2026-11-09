@@ -6,6 +6,7 @@ import {
   getTheme,
   inviteUrl,
   mapsUrl,
+  formatRepeatRule,
 } from '@check-in/shared';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
@@ -133,6 +134,19 @@ export default async function InvitePage({ params }: Props) {
         {avatar ? <img className="avatar" src={avatar} alt="" /> : null}
         <span className="muted" data-testid="hosted-by">{hostedByLine(invite, locale, t)}</span>
       </div>
+      {invite.series ? (
+        <div className="series" data-testid="series-rule">
+          <strong>{formatRepeatRule(invite.series.frequency, invite.series.anchor_local_date, locale)}</strong>
+          {invite.series.next?.token ? (
+            <>
+              {' · '}
+              <a href={`/i/${invite.series.next.token}`} data-testid="next-date">
+                {t('series.next_date')}: {formatEventTime(new Date(invite.series.next.starts_at), locale, e.time_zone)}
+              </a>
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="meta">
         <div data-testid="when">

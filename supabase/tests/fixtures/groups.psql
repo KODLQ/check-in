@@ -1,0 +1,60 @@
+-- Reusable groups fixture (change: add-groups-and-recurring-events). Include after plan() with:
+--   \ir fixtures/groups.psql
+-- Runs inside the caller's transaction, so everything is rolled back with the test.
+--
+-- Users: owner A (Anna), admin B (Erik), member C (Cecilia), invited D (Doris, pending), stranger E (Eva),
+-- account guests F (Frida) and H (Hugo) on A's event E1, account guest G (Gustav) on B's event E2.
+-- E1 also has a web-only guest (Wendy). Group G1 "AW crew": A owner, B admin (joined first), C member.
+-- Switch identity with :as_A … :as_H / :as_anon followed by `set local role authenticated;` (or anon).
+
+\set A '00000000-0000-0000-0000-0000000067a1'
+\set B '00000000-0000-0000-0000-0000000067b1'
+\set C '00000000-0000-0000-0000-0000000067c1'
+\set D '00000000-0000-0000-0000-0000000067d1'
+\set E '00000000-0000-0000-0000-0000000067e1'
+\set F '00000000-0000-0000-0000-0000000067f1'
+\set G '00000000-0000-0000-0000-0000000067f2'
+\set H '00000000-0000-0000-0000-0000000067f3'
+\set G1 '67000000-0000-0000-0000-0000000000a1'
+\set E1 '67000000-0000-0000-0000-0000000000e1'
+\set E2 '67000000-0000-0000-0000-0000000000e2'
+\set as_A 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000067a1","role":"authenticated"}'', true);'
+\set as_B 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000067b1","role":"authenticated"}'', true);'
+\set as_C 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000067c1","role":"authenticated"}'', true);'
+\set as_D 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000067d1","role":"authenticated"}'', true);'
+\set as_E 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000067e1","role":"authenticated"}'', true);'
+\set as_F 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000067f1","role":"authenticated"}'', true);'
+\set as_G 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000067f2","role":"authenticated"}'', true);'
+\set as_H 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000067f3","role":"authenticated"}'', true);'
+\set as_anon 'select set_config(''request.jwt.claims'', ''{"role":"anon"}'', true);'
+
+reset role;
+insert into auth.users (id, email) values
+  (:'A', 'groups-a@test.dev'), (:'B', 'groups-b@test.dev'), (:'C', 'groups-c@test.dev'),
+  (:'D', 'groups-d@test.dev'), (:'E', 'groups-e@test.dev'), (:'F', 'groups-f@test.dev'),
+  (:'G', 'groups-g@test.dev'), (:'H', 'groups-h@test.dev');
+update public.profiles set display_name = 'Anna' where id = :'A';
+update public.profiles set display_name = 'Erik' where id = :'B';
+update public.profiles set display_name = 'Cecilia' where id = :'C';
+update public.profiles set display_name = 'Doris' where id = :'D';
+update public.profiles set display_name = 'Eva' where id = :'E';
+update public.profiles set display_name = 'Frida' where id = :'F';
+update public.profiles set display_name = 'Gustav' where id = :'G';
+update public.profiles set display_name = 'Hugo' where id = :'H';
+
+insert into public.groups (id, owner_id, name, created_at) values (:'G1', :'A', 'AW crew', now() - interval '10 days');
+insert into public.group_members (group_id, user_id, is_admin, joined_at) values
+  (:'G1', :'A', false, now() - interval '10 days'),
+  (:'G1', :'B', true, now() - interval '9 days'),
+  (:'G1', :'C', false, now() - interval '8 days');
+insert into public.group_invitations (group_id, user_id, invited_by, created_at, expires_at)
+values (:'G1', :'D', :'A', now() - interval '1 day', now() + interval '29 days');
+
+insert into public.events (id, host_id, title, starts_at, location_text) values
+  (:'E1', :'A', 'Anna party', now() + interval '3 days', 'Street 1'),
+  (:'E2', :'B', 'Erik dinner', now() + interval '4 days', 'Street 2');
+insert into public.rsvps (event_id, user_id, guest_token_hash, display_name, status) values
+  (:'E1', :'F', null, 'Frida', 'going'),
+  (:'E1', :'H', null, 'Hugo', 'maybe'),
+  (:'E1', null, public.hash_guest_token('groups-web-wendy-0000000001'), 'Wendy', 'going'),
+  (:'E2', :'G', null, 'Gustav', 'going');

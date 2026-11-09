@@ -197,3 +197,38 @@ describe('home list', () => {
     expect(await AsyncStorage.getItem('ci_pending_co_host')).toBeNull();
   });
 });
+
+describe('series and group invites (add-groups-and-recurring-events, 9.3)', () => {
+  const weekly = { frequency: 'weekly', anchor_local_date: '2026-11-13' };
+
+  it('shows a managed series as its next date with the group and rule, opening all dates', async () => {
+    mockData(
+      [
+        { ...hostedEvent('d1', 'AW', 1, 'anna'), series_id: 's1', event_series: weekly, groups: { name: 'AW crew' } },
+        { ...hostedEvent('d2', 'AW', 8, 'anna'), series_id: 's1', event_series: weekly, groups: { name: 'AW crew' } },
+      ],
+      [],
+    );
+    await render(<Events />);
+    expect(await screen.findByTestId('event-d1')).toBeTruthy();
+    expect(screen.queryByTestId('event-d2')).toBeNull();
+    expect(screen.getByTestId('series-line-d1')).toHaveTextContent('AW crew · Every Friday');
+    await fireEvent.press(screen.getByTestId('event-d1'));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/series/[id]', params: { id: 's1', kind: 'hosted' } });
+  });
+
+  it('marks a group invite as not answered and counts later unanswered dates', async () => {
+    const groupInvite = (id: string, days: number, answered: boolean) => ({
+      ...invite(id, 'AW', days, 'going'),
+      my_rsvp: answered ? { status: 'going', display_name: 'Me' } : null,
+      group: { id: 'g1', name: 'AW crew' },
+      series: { id: 's1', ...weekly },
+    });
+    mockData([], [groupInvite('i1', 1, false), groupInvite('i2', 8, false), groupInvite('i3', 15, true)]);
+    await render(<Events />);
+    // The series line names the group, so the first line only carries the answer (it no longer gets cut off).
+    expect(await screen.findByText('Your answer: Not answered yet')).toBeTruthy();
+    expect(screen.getByTestId('series-line-i1')).toHaveTextContent('AW crew · Every Friday · 1 more date not answered');
+    expect(screen.queryByTestId('invite-i2')).toBeNull();
+  });
+});

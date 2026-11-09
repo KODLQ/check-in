@@ -106,3 +106,43 @@ describe('hostingNudge', () => {
     ).toBe(null);
   });
 });
+
+describe('series in the home list (add-groups-and-recurring-events)', () => {
+  const date = (d: number) => `2030-06-${String(d).padStart(2, '0')}T16:00:00Z`;
+  it('shows a hosted series as its next date with the later dates folded in', () => {
+    const s = buildHomeSections(
+      [
+        { ...hosted('d1', date(20)), series_id: 's1' },
+        { ...hosted('d2', date(27)), series_id: 's1' },
+        { ...hosted('solo', date(22)) },
+      ],
+      [],
+      now,
+    );
+    expect(s.upcoming.map((i) => i.id)).toEqual(['d1', 'solo']);
+    expect(s.upcoming[0]!.series).toEqual({ id: 's1', laterCount: 1, laterUnanswered: 0 });
+  });
+
+  it('counts later unanswered dates for an invited series and skips a cancelled next date', () => {
+    const s = buildHomeSections(
+      [],
+      [
+        { ...invite('c', date(16), 'cancelled'), series: { id: 's2' }, my_rsvp: null },
+        { ...invite('a', date(23)), series: { id: 's2' }, my_rsvp: { status: 'going' } },
+        { ...invite('b', date(30)), series: { id: 's2' }, my_rsvp: null },
+      ],
+      now,
+    );
+    expect(s.upcoming.map((i) => i.id)).toEqual(['a']);
+    expect(s.upcoming[0]!.series).toEqual({ id: 's2', laterCount: 1, laterUnanswered: 1 });
+  });
+
+  it('keeps past dates of a series as separate items', () => {
+    const s = buildHomeSections(
+      [{ ...hosted('p1', '2030-06-01T16:00:00Z'), series_id: 's1' }, { ...hosted('p2', '2030-06-08T16:00:00Z'), series_id: 's1' }],
+      [],
+      now,
+    );
+    expect(s.past.map((i) => i.id)).toEqual(['p2', 'p1']);
+  });
+});

@@ -171,3 +171,67 @@ describe('my invite screen', () => {
     expect(await screen.findByText('Invite not found')).toBeTruthy();
   });
 });
+
+describe('group invites (add-groups-and-recurring-events, 9.4)', () => {
+  const notManager = () =>
+    (supabase.from as jest.Mock).mockReturnValue({
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }),
+    });
+  const groupDetail = (answered: boolean) => ({
+    ...detail('active', 'going'),
+    my_rsvp: answered ? { status: 'going', display_name: 'Sara B' } : null,
+    group: { name: 'AW crew' },
+    series: {
+      frequency: 'weekly',
+      anchor_local_date: '2030-12-13',
+      next: { event_id: 'ev-2', starts_at: '2030-12-20T18:00:00Z', token: 'NextDate0001' },
+    },
+  });
+
+  it('shows a series date not answered yet, with the group as host and the rule, and gives a first answer', async () => {
+    notManager();
+    let answered = false;
+    rpc.mockImplementation(async (fn: string) => {
+      if (fn === 'set_my_rsvp') answered = true;
+      return { data: fn === 'get_my_invite' ? groupDetail(answered) : { status: 'going' }, error: null };
+    });
+    await render(<MyInviteScreen />);
+    expect(await screen.findByTestId('not-answered')).toHaveTextContent('Not answered yet');
+    expect(screen.getByText(/AW crew · Lina/)).toBeTruthy();
+    expect(screen.getByTestId('invite-series-rule')).toHaveTextContent('Every Friday');
+    expect(screen.queryByTestId('withdraw')).toBeNull();
+    await fireEvent.press(screen.getByTestId('answer-going'));
+    expect(rpc).toHaveBeenCalledWith('set_my_rsvp', { p_event_id: 'ev-1', p_status: 'going' });
+    await waitFor(() => expect(screen.queryByTestId('not-answered')).toBeNull());
+    expect(screen.getByTestId('withdraw')).toBeTruthy();
+  });
+
+  it('withdrawing goes back so the date shows as not answered again', async () => {
+    notManager();
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'remove_rsvp' ? { data: true, error: null } : { data: groupDetail(true), error: null },
+    );
+    (supabase.from as jest.Mock).mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({ data: null, error: null }),
+          eq: () => ({ maybeSingle: async () => ({ data: { id: 'r1' }, error: null }) }),
+        }),
+      }),
+    });
+    const alert = jest.spyOn(Alert, 'alert');
+    await render(<MyInviteScreen />);
+    await fireEvent.press(await screen.findByTestId('withdraw'));
+    await alert.mock.calls.at(-1)![2]!.at(-1)!.onPress!();
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('remove_rsvp', { p_rsvp_id: 'r1' }));
+    await waitFor(() => expect(router.back).toHaveBeenCalled());
+  });
+
+  it('links to the next date', async () => {
+    notManager();
+    rpc.mockResolvedValue({ data: groupDetail(true), error: null });
+    await render(<MyInviteScreen />);
+    await fireEvent.press(await screen.findByTestId('next-date'));
+    expect(router.push).toHaveBeenCalledWith('/i/NextDate0001');
+  });
+});

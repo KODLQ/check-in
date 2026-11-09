@@ -6,7 +6,14 @@ describe('notificationRoute', () => {
       '/events/e0000000-0000-0000-0000-000000000001',
     ));
   it('opens the invite for guests', () => expect(notificationRoute({ url: '/i/DemoFredag01' })).toBe('/i/DemoFredag01'));
+  it('opens groups and in-app invites (add-groups-and-recurring-events)', () => {
+    expect(notificationRoute({ url: '/groups' })).toBe('/groups');
+    expect(notificationRoute({ url: '/groups/67000000-0000-0000-0000-0000000000a1' })).toBe('/groups/67000000-0000-0000-0000-0000000000a1');
+    expect(notificationRoute({ url: '/invites/e0000000-0000-0000-0000-000000000001' })).toBe('/invites/e0000000-0000-0000-0000-000000000001');
+  });
   it.each([
+    [{ url: '/groups/not-a-uuid' }],
+    [{ url: '/invites/x' }],
     [undefined],
     [{}],
     [{ url: 42 }],

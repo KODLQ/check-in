@@ -1,6 +1,7 @@
 import {
   buildHomeSections,
   formatEventTime,
+  formatRepeatRule,
   headCount,
   hostingNudge,
   pollNeedsPick,
@@ -23,12 +24,16 @@ import { Cover } from '@/components/cover';
 import { Body, Button, Card, Spinner, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { locale } from '@/lib/i18n';
+import { consumePendingGroupLink } from '@/lib/groups';
 import { consumePendingCoHostInvite } from '@/lib/pending-co-host';
 import { onInvitesClaimed } from '@/lib/pending-claim';
 import { supabase, type EventRow } from '@/lib/supabase';
 
 type HostedEvent = EventRow & {
   rsvps: { status: string; plus_ones: number }[];
+  /** add-groups-and-recurring-events: the series rule (group admins) and the invited group's name. */
+  event_series: { frequency: 'weekly' | 'biweekly' | 'monthly'; anchor_local_date: string } | null;
+  groups: { name: string } | null;
   /** Date polls (add-date-polls): voter count and option times, only meaningful while starts_at is null. */
   date_poll_voters: { count: number }[];
   date_poll_options: { starts_at: string }[];
@@ -103,7 +108,9 @@ export default function Events() {
     const [events, mine] = await Promise.all([
       supabase
         .from('events')
-        .select('*, rsvps(status, plus_ones), date_poll_voters(count), date_poll_options(starts_at)')
+        .select(
+          '*, rsvps(status, plus_ones), date_poll_voters(count), date_poll_options(starts_at), event_series(frequency, anchor_local_date), groups(name)',
+        )
         .order('starts_at', { ascending: true, nullsFirst: true }),
       supabase.rpc('list_my_invites'),
     ]);
@@ -117,6 +124,10 @@ export default function Events() {
       // A co-host link opened before signing in / onboarding continues here (everyone lands on home).
       void consumePendingCoHostInvite().then((token) => {
         if (token) router.push(`/c/${token}`);
+      });
+      // Same for a group link (add-groups-and-recurring-events).
+      void consumePendingGroupLink().then((token) => {
+        if (token) router.push(`/g/${token}`);
       });
     }, [load]),
   );
@@ -172,14 +183,38 @@ export default function Events() {
       onPress = () => router.push(`/events/${item.id}`);
     } else {
       const mine = item.event.my_rsvp;
-      detail = t('events.hosted_by_answer', {
-        name: item.event.host.display_name ?? '',
-        status:
-          mine.status === 'going' && (mine.plus_ones ?? 0) > 0
+      const host = item.event.series && item.event.group
+        ? t('series.hosted_by_group', { group: item.event.group.name, name: item.event.host.display_name ?? '' })
+        : (item.event.host.display_name ?? '');
+      // A series date already names its group on the series line below, so only the answer is shown here.
+      detail = t(item.event.series ? 'rsvp.your_answer' : 'events.hosted_by_answer', {
+        name: host,
+        status: !mine
+          ? t('series.not_answered')
+          : mine.status === 'going' && (mine.plus_ones ?? 0) > 0
             ? t('rsvp.going_plus', { count: mine.plus_ones })
             : t(`rsvp.${mine.status}`),
       });
       onPress = () => router.push(`/invites/${item.id}`);
+    }
+    // A series shows as its next date: the rule, and how many later dates it stands for.
+    const rule =
+      item.kind === 'hosted'
+        ? item.event.event_series
+          ? formatRepeatRule(item.event.event_series.frequency, item.event.event_series.anchor_local_date, locale)
+          : null
+        : item.event.series
+          ? formatRepeatRule(item.event.series.frequency, item.event.series.anchor_local_date, locale)
+          : null;
+    const groupName = item.kind === 'hosted' ? item.event.groups?.name : item.event.group?.name;
+    const seriesLine = rule
+      ? [groupName, rule, item.series?.laterUnanswered ? t('series.more_unanswered', { count: item.series.laterUnanswered }) : null]
+          .filter(Boolean)
+          .join(' · ')
+      : null;
+    if (item.series) {
+      const sid = item.series.id;
+      onPress = () => router.push({ pathname: '/series/[id]', params: { id: sid, kind: item.kind } });
     }
     return (
       <Pressable
@@ -217,6 +252,11 @@ export default function Events() {
             <Text style={{ color: '#fff' }} numberOfLines={1}>
               {detail}
             </Text>
+            {seriesLine ? (
+              <Text testID={`series-line-${item.id}`} style={{ color: '#fff', fontWeight: '700' }} numberOfLines={1}>
+                {seriesLine}
+              </Text>
+            ) : null}
           </View>
         </Cover>
       </Pressable>
@@ -227,12 +267,20 @@ export default function Events() {
     <>
       <Stack.Screen
         options={{
+          // Both on the right: Android left-aligns the title, so a left button would run into it.
           headerRight: () => (
-            <Link href="/settings" asChild>
-              <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel={t('profile.settings')} testID="open-settings">
-                <Text style={{ fontSize: 22, color: c.text }}>⚙︎</Text>
-              </Pressable>
-            </Link>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+              <Link href="/groups" asChild>
+                <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel={t('groups.title')} testID="open-groups">
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: c.accent }}>{t('groups.open_groups')}</Text>
+                </Pressable>
+              </Link>
+              <Link href="/settings" asChild>
+                <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel={t('profile.settings')} testID="open-settings">
+                  <Text style={{ fontSize: 22, color: c.text }}>⚙︎</Text>
+                </Pressable>
+              </Link>
+            </View>
           ),
         }}
       />

@@ -70,6 +70,23 @@ export function errorKey(error: { message?: string } | null | undefined): string
     'no_votes',
     'option_not_found',
     'invalid_choice',
+    // Groups and repeating events (add-groups-and-recurring-events). Longer names first: matching is by
+    // substring, so 'not_group_admin' must be tried before shorter keys it contains.
+    'not_group_admin',
+    'owner_must_hand_over',
+    'owner_target',
+    'group_limit',
+    'group_full',
+    'series_limit',
+    'series_group_fixed',
+    'day_change_this_date_only',
+    'not_invitable',
+    'not_member',
+    'repeat_with_poll',
+    'invalid_end_date',
+    'invalid_name',
+    'display_name_required',
+    'group_needs_date',
   ];
   return known.find((k) => error?.message?.includes(k)) ?? 'unknown';
 }

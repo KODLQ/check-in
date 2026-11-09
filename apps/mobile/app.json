@@ -53,6 +53,11 @@
               "scheme": "https",
               "host": "checkin.example",
               "pathPrefix": "/c/"
+            },
+            {
+              "scheme": "https",
+              "host": "checkin.example",
+              "pathPrefix": "/g/"
             }
           ],
           "category": [

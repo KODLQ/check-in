@@ -1,6 +1,10 @@
 import {
+  endsOnError,
   EVENT_THEMES,
   fieldErrors,
+  formatRepeatRule,
+  groupNameSchema,
+  REPEAT_FREQUENCIES,
   makeDatePollInputSchema,
   makeEventInputSchema,
   MAX_PLUS_ONES,
@@ -8,6 +12,7 @@ import {
   type EditedOption,
   type EventInput,
   type PollErrors,
+  type RepeatFrequency,
 } from '@check-in/shared';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +21,8 @@ import {
   KeyboardAwareScrollView,
   type KeyboardAwareScrollViewRef,
 } from 'react-native-keyboard-controller';
+
+import { locale } from '@/lib/i18n';
 
 import { Cover } from './cover';
 import { DateField } from './date-field';
@@ -31,6 +38,25 @@ export interface EventFormValues extends EventInput {
    * meaningless and must not be saved.
    */
   poll?: { options: { startsAt: Date; endsAt?: Date }[]; closesAt: Date | null };
+  /**
+   * Repeating (add-groups-and-recurring-events): the series belongs to an existing group (groupId) or to
+   * a new one created first (newGroupName). endsOn is the last local date (YYYY-MM-DD) or null.
+   */
+  repeat?: { frequency: RepeatFrequency; endsOn: string | null; groupId: string | null; newGroupName: string | null };
+  /** One-off event inviting a group the user owns or administers. */
+  groupId?: string | null;
+}
+
+/** A group the user may invite or put a series in (owner or admin). */
+export interface FormGroup {
+  id: string;
+  name: string;
+}
+
+/** Local calendar date (YYYY-MM-DD) of a Date on this device. */
+export function localDate(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /** Far enough ahead to pass the start-time rule when only the other fields are being validated. */
@@ -69,7 +95,13 @@ export function EventForm({
   datePending = false,
   renderHeader,
   onDirtyChange,
+  groups,
+  allowRepeat = false,
 }: {
+  /** Groups the user owns or administers: offered for repeating and for inviting a group. */
+  groups?: readonly FormGroup[];
+  /** Offer "Repeat" (creating an event with a fixed date). */
+  allowRepeat?: boolean;
   /** Header buttons (Cancel / Save) of the screen showing the form. */
   renderHeader?: (header: EventFormHeader) => ReactNode;
   /** Called when the form gets or loses unsaved changes. */
@@ -114,6 +146,12 @@ export function EventForm({
   );
   const [closesAt, setClosesAt] = useState<Date | null>(initial?.poll?.closesAt ?? null);
   const [pollErrs, setPollErrs] = useState<PollErrors | null>(null);
+  // Repeat and group (add-groups-and-recurring-events).
+  const [frequency, setFrequency] = useState<RepeatFrequency | 'never'>(initial?.repeat?.frequency ?? 'never');
+  const [seriesGroupId, setSeriesGroupId] = useState<string | null>(initial?.repeat?.groupId ?? groups?.[0]?.id ?? null);
+  const [newGroupName, setNewGroupName] = useState<string | null>(groups && groups.length === 0 ? '' : null);
+  const [endsOn, setEndsOn] = useState<Date | null>(null);
+  const [inviteGroupId, setInviteGroupId] = useState<string | null>(initial?.groupId ?? null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [pickingCover, setPickingCover] = useState(false);
@@ -135,6 +173,11 @@ export function EventForm({
     mode,
     pollOptions,
     closesAt,
+    frequency,
+    seriesGroupId,
+    newGroupName,
+    endsOn,
+    inviteGroupId,
   });
   const [initialSnapshot] = useState(snapshot);
   const dirty = snapshot !== initialSnapshot;
@@ -191,8 +234,18 @@ export function EventForm({
       : null;
     const pe = pollParsed ? pollErrors(pollParsed) : null;
     setPollErrs(pe);
-    if (fe || !parsed.success || pe) {
-      setErrors(fe ?? {});
+    const repeating = allowRepeat && !voting && frequency !== 'never';
+    const repeatErrors: Record<string, string> = {};
+    if (repeating) {
+      if (newGroupName !== null) {
+        if (!groupNameSchema.safeParse(newGroupName).success) repeatErrors.group = 'invalid_name';
+      } else if (!seriesGroupId) {
+        repeatErrors.group = 'group_required';
+      }
+      if (endsOn && endsOnError(localDate(endsOn), localDate(startsAt))) repeatErrors.endsOn = 'invalid_end_date';
+    }
+    if (fe || !parsed.success || pe || Object.keys(repeatErrors).length > 0) {
+      setErrors({ ...(fe ?? {}), ...repeatErrors });
       if (fe?.capacity || fe?.maxPlusOnes) setGuestsOpen(true);
       return;
     }
@@ -213,6 +266,18 @@ export function EventForm({
         coverPath,
         guestListVisible,
         ...(poll ? { poll } : {}),
+        ...(repeating
+          ? {
+              repeat: {
+                frequency: frequency as RepeatFrequency,
+                endsOn: endsOn ? localDate(endsOn) : null,
+                groupId: newGroupName !== null ? null : seriesGroupId,
+                newGroupName: newGroupName !== null ? newGroupName.trim() : null,
+              },
+            }
+          : groups
+            ? { groupId: voting ? null : inviteGroupId }
+            : {}),
       });
       if (result) setErrors({ _: result });
     } finally {
@@ -360,6 +425,111 @@ export function EventForm({
         </>
       )}
 
+      {allowRepeat && mode === 'fixed' && !datePending ? (
+        <View style={{ gap: 10 }} testID="repeat-section">
+          <Label>{t('series.repeat')}</Label>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} accessibilityRole="radiogroup">
+            {(['never', ...REPEAT_FREQUENCIES] as const).map((f) => (
+              <Chip
+                key={f}
+                testID={`repeat-${f}`}
+                label={t(`series.${f}`)}
+                selected={frequency === f}
+                onPress={() => {
+                  setFrequency(f);
+                  clearErrors('group', 'endsOn');
+                }}
+              />
+            ))}
+          </View>
+          {frequency !== 'never' ? (
+            <>
+              <Text testID="repeat-rule" style={{ color: c.muted, fontSize: 15 }}>
+                {formatRepeatRule(frequency, localDate(startsAt), locale)}
+              </Text>
+              <Label>{t('series.group_label')}</Label>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} accessibilityRole="radiogroup">
+                {(groups ?? []).map((g) => (
+                  <Chip
+                    key={g.id}
+                    testID={`series-group-${g.id}`}
+                    label={g.name}
+                    selected={newGroupName === null && seriesGroupId === g.id}
+                    onPress={() => {
+                      setSeriesGroupId(g.id);
+                      setNewGroupName(null);
+                      clearErrors('group');
+                    }}
+                  />
+                ))}
+                <Chip
+                  testID="series-new-group"
+                  label={t('series.new_group_inline')}
+                  selected={newGroupName !== null}
+                  onPress={() => {
+                    setNewGroupName(newGroupName ?? '');
+                    clearErrors('group');
+                  }}
+                />
+              </View>
+              {newGroupName !== null ? (
+                <Field
+                  testID="series-new-group-name"
+                  label={t('groups.name_label')}
+                  value={newGroupName}
+                  onChangeText={(v) => {
+                    setNewGroupName(v);
+                    clearErrors('group');
+                  }}
+                  placeholder={t('groups.name_placeholder')}
+                  maxLength={50}
+                />
+              ) : null}
+              <ErrorText testID="series-group-error">{err('group')}</ErrorText>
+              {endsOn ? (
+                <DateField
+                  testID="series-ends-on"
+                  label={t('series.ends_on')}
+                  value={endsOn}
+                  onChange={(d) => {
+                    setEndsOn(d);
+                    clearErrors('endsOn');
+                  }}
+                  onClear={() => setEndsOn(null)}
+                  clearLabel={t('series.remove_end_date')}
+                  error={err('endsOn')}
+                />
+              ) : (
+                <Button
+                  testID="series-add-end"
+                  variant="ghost"
+                  title={t('series.add_end_date')}
+                  onPress={() => setEndsOn(new Date(startsAt.getTime() + 90 * 24 * 60 * 60 * 1000))}
+                />
+              )}
+            </>
+          ) : null}
+        </View>
+      ) : null}
+
+      {groups && groups.length > 0 && !(allowRepeat && frequency !== 'never') && mode === 'fixed' && !datePending ? (
+        <View style={{ gap: 10 }} testID="invite-group-section">
+          <Label>{t('series.invite_group')}</Label>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} accessibilityRole="radiogroup">
+            <Chip testID="invite-group-none" label={t('series.no_group')} selected={inviteGroupId === null} onPress={() => setInviteGroupId(null)} />
+            {groups.map((g) => (
+              <Chip
+                key={g.id}
+                testID={`invite-group-${g.id}`}
+                label={g.name}
+                selected={inviteGroupId === g.id}
+                onPress={() => setInviteGroupId(g.id)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       <View onLayout={(e) => (locationY.current = e.nativeEvent.layout.y)}>
         <LocationField
           label={t('events.location')}
@@ -495,5 +665,28 @@ export function EventForm({
       </ErrorText>
       <Button testID="submit" title={submitLabel} loading={busy} onPress={submit} />
     </KeyboardAwareScrollView>
+  );
+}
+
+/** Small selectable pill (repeat frequency, group). */
+function Chip({ label, selected, onPress, testID }: { label: string; selected: boolean; onPress: () => void; testID?: string }) {
+  const c = useColors();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minHeight: 40,
+        paddingHorizontal: 14,
+        borderRadius: 20,
+        justifyContent: 'center',
+        backgroundColor: selected ? c.accent : c.surface,
+        opacity: pressed ? 0.8 : 1,
+      })}
+    >
+      <Text style={{ color: selected ? c.accentText : c.text, fontWeight: '600' }}>{label}</Text>
+    </Pressable>
   );
 }

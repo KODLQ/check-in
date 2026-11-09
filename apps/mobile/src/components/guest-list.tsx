@@ -12,6 +12,8 @@ export interface GuestRow {
   status: RsvpState;
   plus_ones: number;
   waitlisted_at: string | null;
+  /** Set for answers from an app account (add-groups-and-recurring-events: member vs outside guest). */
+  user_id?: string | null;
 }
 
 const GROUPS: RsvpState[] = ['going', 'maybe', 'declined', 'waitlisted'];
@@ -37,7 +39,10 @@ export function GuestList({
   editable,
   onRemove,
   onPromote,
+  memberIds,
 }: {
+  /** For an event that invites a group: everyone else is marked as an outside guest. */
+  memberIds?: ReadonlySet<string>;
   rsvps: readonly GuestRow[];
   capacity: number | null;
   editable: boolean;
@@ -64,6 +69,11 @@ export function GuestList({
                   <View style={{ flex: 1, flexDirection: 'row', gap: 6, alignItems: 'baseline' }}>
                     {status === 'waitlisted' ? <Text style={{ color: c.muted }}>{i + 1}.</Text> : null}
                     <Body>{r.display_name}</Body>
+                    {memberIds && !(r.user_id && memberIds.has(r.user_id)) ? (
+                      <Text testID={`outside-${r.display_name}`} style={{ color: c.muted, fontSize: 13, fontWeight: '700' }}>
+                        {t('groups.guest_badge')}
+                      </Text>
+                    ) : null}
                     {r.plus_ones > 0 ? (
                       <Text testID={`plus-${r.display_name}`} style={{ color: c.accent, fontWeight: '700' }}>
                         +{r.plus_ones}

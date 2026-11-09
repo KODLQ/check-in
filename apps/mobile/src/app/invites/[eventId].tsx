@@ -1,4 +1,4 @@
-import { formatHostNames, formatTimeRange, hostedByKey, type RsvpStatus } from '@check-in/shared';
+import { formatEventTime, formatHostNames, formatRepeatRule, formatTimeRange, hostedByKey, type RsvpStatus } from '@check-in/shared';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +35,13 @@ interface MyInviteDetail extends RsvpInvite {
   co_hosts?: { display_name: string | null }[];
   guests?: { display_name: string; status: RsvpStatus; plus_ones?: number }[] | null;
   announcements?: AnnouncementItem[];
+  /** add-groups-and-recurring-events: series dates show the group as host and link to the next date. */
+  group?: { name: string } | null;
+  series?: {
+    frequency: 'weekly' | 'biweekly' | 'monthly';
+    anchor_local_date: string;
+    next: { event_id: string; starts_at: string; token: string | null } | null;
+  } | null;
 }
 
 /** An invite from the home list (keyed by event id), using get_my_invite / set_my_rsvp (spec: my-invites). */
@@ -144,8 +151,15 @@ export default function MyInviteScreen() {
       <Cover coverPath={e.cover_path} theme={e.theme} height={200} />
       <Title>{e.title}</Title>
       <Body muted>{t(`invite.${hostedByKey(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name))}`, {
-          name: formatHostNames(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name), locale),
+          name: invite.group
+            ? t('series.hosted_by_group', { group: invite.group.name, name: invite.host?.display_name ?? '' })
+            : formatHostNames(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name), locale),
         })}</Body>
+      {invite.series ? (
+        <Text testID="invite-series-rule" style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>
+          {formatRepeatRule(invite.series.frequency, invite.series.anchor_local_date, locale)}
+        </Text>
+      ) : null}
       <Body>
         {formatTimeRange(
           new Date(e.starts_at),
@@ -166,8 +180,15 @@ export default function MyInviteScreen() {
 
       {open ? (
         <>
+          {invite.my_rsvp ? null : (
+            <Text testID="not-answered" style={{ color: c.accent, fontSize: 16, fontWeight: '700' }}>
+              {t('series.not_answered')}
+            </Text>
+          )}
           <RsvpControls invite={invite} busy={busy} onRespond={(s, n) => void respond(s, n)} />
-          <Button testID="withdraw" variant="ghost" title={t('rsvp.remove')} onPress={() => void withdraw()} />
+          {invite.my_rsvp ? (
+            <Button testID="withdraw" variant="ghost" title={t('rsvp.remove')} onPress={() => void withdraw()} />
+          ) : null}
         </>
       ) : invite.my_rsvp ? (
         <Text testID="my-answer" style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>
@@ -175,6 +196,19 @@ export default function MyInviteScreen() {
         </Text>
       ) : null}
       <ErrorText>{error}</ErrorText>
+
+      {invite.series?.next ? (
+        <Button
+          testID="next-date"
+          variant="secondary"
+          title={`${t('series.next_date')}: ${formatEventTime(new Date(invite.series.next.starts_at), locale, e.time_zone)}`}
+          // Group members see the next date in the app; others reach it through its invite link.
+          onPress={() => {
+            const next = invite.series!.next!;
+            router.push(next.token ? `/i/${next.token}` : `/invites/${next.event_id}`);
+          }}
+        />
+      ) : null}
 
       <Button
         testID="open-wall"

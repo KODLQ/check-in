@@ -36,7 +36,14 @@ export interface DeliveryContext {
   payload: Record<string, unknown> & { changed?: string[] };
   announcement: { body: string | null } | null;
   replies: { display_name: string; status: 'going' | 'maybe' | 'declined' }[] | null;
+  /** add-groups-and-recurring-events */
+  group?: { id: string; name: string } | null;
+  actor_name?: string | null;
+  joined_names?: string[] | null;
 }
+
+/** Group membership notifications are about a group, not an event. */
+const EVENTLESS_KINDS = new Set(['group_invited', 'group_joined', 'group_new_owner']);
 
 export type Outcome = 'sent' | 'temporary' | 'permanent';
 
@@ -86,13 +93,17 @@ export function emailUrls(ctx: DeliveryContext, config: WorkerConfig) {
 }
 
 function renderCtx(ctx: DeliveryContext) {
-  if (!ctx.event) throw new Error('missing_event');
+  if (!ctx.event && !EVENTLESS_KINDS.has(ctx.kind)) throw new Error('missing_event');
+  if (EVENTLESS_KINDS.has(ctx.kind) && !ctx.group) throw new Error('missing_group');
   return {
     event: ctx.event,
     hostName: ctx.host_name,
     payload: ctx.payload,
     announcement: ctx.announcement,
     replies: ctx.replies,
+    group: ctx.group ?? null,
+    actorName: ctx.actor_name ?? null,
+    joinedNames: ctx.joined_names ?? null,
   };
 }
 

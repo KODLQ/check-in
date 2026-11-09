@@ -22,6 +22,11 @@ select results_eq(
        ('event_cancelled', true, array['push', 'email'], false),
        ('event_changed', false, array['push', 'email'], false),
        ('event_reminder', false, array['push', 'email'], true),
+       ('group_answer_reminder', false, array['push'], true),
+       ('group_date_open', false, array['push'], true),
+       ('group_invited', false, array['push'], false),
+       ('group_joined', false, array['push'], false),
+       ('group_new_owner', false, array['push'], false),
        ('rsvp_digest', false, array['push'], false),
        ('rsvp_email_confirmation', true, array['email'], false),
        ('waitlist_promoted', false, array['push', 'email'], true),
@@ -89,7 +94,7 @@ select throws_ok($$ select enqueue_notification('announcement', '10000000-0000-0
   '42501', null, 'authenticated cannot call enqueue_notification');
 select throws_ok($$ select cancel_event_notifications('10000000-0000-0000-0000-000000000001') $$,
   '42501', null, 'authenticated cannot call cancel_event_notifications');
-select is((select count(*)::int from notification_kinds), 9, 'authenticated can read the kinds registry');
+select is((select count(*)::int from notification_kinds), 14, 'authenticated can read the kinds registry');
 select throws_ok($$ insert into notification_kinds (kind, channels) values ('spam', array['email']) $$,
   '42501', null, 'authenticated cannot add kinds');
 select ok(is_event_manager('10000000-0000-0000-0000-000000000001'), 'host is an event manager');

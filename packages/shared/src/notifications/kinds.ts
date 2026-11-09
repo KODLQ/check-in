@@ -30,6 +30,12 @@ export const NOTIFICATION_KINDS = {
   date_picked: { urgent: false, channels: ['push'], staleAfterStart: true },
   // add-event-wall: batched push to the host and co-hosts when guests post on the wall (no names or text).
   wall_digest: { urgent: false, channels: ['push'], staleAfterStart: false },
+  // add-groups-and-recurring-events: group membership (no event) and group events.
+  group_invited: { urgent: false, channels: ['push'], staleAfterStart: false },
+  group_joined: { urgent: false, channels: ['push'], staleAfterStart: false },
+  group_new_owner: { urgent: false, channels: ['push'], staleAfterStart: false },
+  group_date_open: { urgent: false, channels: ['push'], staleAfterStart: true },
+  group_answer_reminder: { urgent: false, channels: ['push'], staleAfterStart: true },
 } as const satisfies Record<string, NotificationKindConfig>;
 
 export type NotificationKind = keyof typeof NOTIFICATION_KINDS;

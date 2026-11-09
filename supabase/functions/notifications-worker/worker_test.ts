@@ -138,3 +138,29 @@ Deno.test('unknown kinds fail permanently instead of looping', async () => {
   await runWorker({ db, push, email, config });
   assertEquals(completions[0], { id: 'x', outcome: 'permanent', providerId: null, error: 'unknown_kind' });
 });
+
+Deno.test('group membership pushes render without an event (add-groups-and-recurring-events)', async () => {
+  const { db, completions } = fakeDb([
+    ctx({ delivery_id: 'g1', kind: 'group_invited', event: null, invite_token: null, url_path: '/groups',
+      group: { id: 'g', name: 'AW crew' }, actor_name: 'Anna' }),
+    ctx({ delivery_id: 'g2', kind: 'group_joined', event: null, invite_token: null, url_path: '/groups/g', locale: 'sv',
+      group: { id: 'g', name: 'AW crew' }, joined_names: ['Erik', 'Sara'] }),
+    ctx({ delivery_id: 'g3', kind: 'group_new_owner', event: null, invite_token: null, url_path: '/groups/g', group: null }),
+    ctx({ delivery_id: 'g4', kind: 'group_date_open', url_path: '/invites/e1' }),
+  ]);
+  const pushed: ExpoMessage[] = [];
+  const push: PushClient = {
+    send: (m) => {
+      pushed.push(...m);
+      return Promise.resolve(m.map(() => ({ ok: true as const, ticketId: 't' })));
+    },
+    receipts: () => Promise.resolve(new Map()),
+  };
+  const email: EmailTransport = { name: 'fake', send: () => Promise.resolve({ ok: true, id: 'x' }) };
+  await runWorker({ db, push, email, config });
+  assertEquals(pushed.map((p) => p.title), ['Anna invited you to AW crew', 'AW crew', 'Fredagshäng: are you in?']);
+  assertEquals(pushed[0]!.data, { kind: 'group_invited', url: '/groups' });
+  assertEquals(pushed[1]!.body, '2 personer gick med: Erik, Sara');
+  assertEquals(pushed[2]!.data, { kind: 'group_date_open', url: '/invites/e1' });
+  assertEquals(completions.find((c) => c.id === 'g3')?.error, 'render_error');
+});

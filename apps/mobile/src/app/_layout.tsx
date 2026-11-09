@@ -76,6 +76,8 @@ function RootStack() {
       <Stack.Screen name="i/[token]" options={{ title: '' }} />
       {/* Co-host links handle signed-out / onboarding users themselves (pending-co-host). */}
       <Stack.Screen name="c/[token]" options={{ title: '' }} />
+      {/* Group links do the same (add-groups-and-recurring-events). */}
+      <Stack.Screen name="g/[token]" options={{ title: '' }} />
       <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
       <Stack.Screen name="claim" options={{ headerShown: false }} />
 
@@ -105,6 +107,10 @@ function RootStack() {
           options={{ title: t('polls.edit_options'), presentation: 'modal' }}
         />
         <Stack.Screen name="settings" options={{ title: t('profile.settings') }} />
+        {/* Groups and repeating events (add-groups-and-recurring-events). */}
+        <Stack.Screen name="groups/index" options={{ title: t('groups.title') }} />
+        <Stack.Screen name="groups/[id]" options={{ title: '' }} />
+        <Stack.Screen name="series/[id]" options={{ title: t('series.dates_title') }} />
         {/* Event wall (add-event-wall): /wall?eventId=… or /wall?token=… */}
         <Stack.Screen name="wall" options={{ title: '' }} />
       </Stack.Protected>

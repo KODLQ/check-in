@@ -19,6 +19,7 @@ jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn() }));
 jest.mock('@/components/cover', () => ({ Cover: () => null }));
 jest.mock('@/components/toast', () => ({ Toast: () => null }));
 jest.mock('@/components/story-share-button', () => ({ StoryShareButton: () => null }));
+jest.mock('@/lib/action-sheet', () => ({ showActionSheet: jest.fn() }));
 jest.mock('@/lib/events', () => ({
   ...jest.requireActual('@/lib/events'),
   fetchActiveInvite: jest.fn(async () => 'AbC123def456'),
@@ -28,6 +29,7 @@ let mockUserId = 'owner';
 jest.mock('@/lib/auth', () => ({ useAuth: () => ({ session: { user: { id: mockUserId } } }) }));
 
 let mockEvent: Record<string, unknown> | null;
+let mockSeries: Record<string, unknown> | null = null;
 let mockLinks: unknown[] = [];
 let mockRsvps: unknown[] = [];
 jest.mock('@/lib/supabase', () => {
@@ -35,6 +37,8 @@ jest.mock('@/lib/supabase', () => {
     const result = () =>
       table === 'events'
         ? { data: mockEvent, error: null }
+        : table === 'event_series'
+          ? { data: mockSeries, error: null }
         : { data: table === 'co_host_invites' ? mockLinks : table === 'rsvps' ? mockRsvps : [], error: null };
     const b: Record<string, unknown> = {};
     for (const m of ['select', 'eq', 'order', 'update', 'is', 'gt']) b[m] = () => b;
@@ -83,6 +87,7 @@ beforeEach(() => {
   mockEvent = { ...baseEvent };
   mockLinks = [];
   mockRsvps = [];
+  mockSeries = null;
   mockUserId = 'owner';
   mockRpc();
 });
@@ -187,5 +192,63 @@ describe('event detail layout', () => {
       'Anna will be taken off the guest list. A waitlisted guest will be promoted to the free spot.',
       expect.any(Array),
     );
+  });
+});
+
+describe('series date managed by a group admin (add-groups-and-recurring-events, 9.2, 9.3)', () => {
+  const { showActionSheet } = jest.requireMock('@/lib/action-sheet') as { showActionSheet: jest.Mock };
+
+  beforeEach(() => {
+    mockEvent = { ...baseEvent, series_id: 's1', group_id: 'g1' };
+    mockSeries = { frequency: 'weekly', anchor_local_date: '2026-11-13', ends_on: null };
+    mockRsvps = [
+      { id: 'r1', display_name: 'Frida', status: 'going', plus_ones: 0, user_id: 'frida', waitlisted_at: null },
+      { id: 'r2', display_name: 'Wendy', status: 'going', plus_ones: 0, user_id: null, waitlisted_at: null },
+    ];
+    mockUserId = 'admin';
+  });
+
+  it('gives a group admin owner actions and the series actions, with the group line and not-answered count', async () => {
+    mockRpc({
+      is_event_owner: { data: true, error: null },
+      is_series_admin: { data: true, error: null },
+      group_event_summary: { data: { group_name: 'AW crew', not_answered: 7, member_user_ids: ['frida', 'admin'] }, error: null },
+    });
+    await render(<EventDetail />);
+    expect(await screen.findByTestId('event-group-line')).toHaveTextContent('AW crew · Every Friday');
+    expect(screen.getByTestId('guest-summary')).toHaveTextContent(/7 not answered/);
+    expect(screen.getByTestId('repeat-settings')).toBeTruthy();
+    expect(screen.getByTestId('end-series')).toBeTruthy();
+    expect(screen.getByTestId('cancel-event')).toBeTruthy();
+    expect(screen.queryByTestId('leave-co-host')).toBeNull();
+    expect(screen.getByTestId('outside-Wendy')).toHaveTextContent('Guest');
+    expect(screen.queryByTestId('outside-Frida')).toBeNull();
+  });
+
+  it('ends the series, cancelling planned dates, with end_series', async () => {
+    mockRpc({ is_event_owner: { data: true, error: null }, is_series_admin: { data: true, error: null } });
+    showActionSheet.mockResolvedValue(1);
+    await render(<EventDetail />);
+    await fireEvent.press(await screen.findByTestId('end-series'));
+    await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith('end_series', { p_series_id: 's1', p_cancel_upcoming: true }));
+  });
+
+  it('changes the repeat rule with update_series_rule', async () => {
+    mockRpc({ is_event_owner: { data: true, error: null }, is_series_admin: { data: true, error: null } });
+    showActionSheet.mockResolvedValue(1);
+    await render(<EventDetail />);
+    await fireEvent.press(await screen.findByTestId('repeat-settings'));
+    await waitFor(() =>
+      expect(supabase.rpc).toHaveBeenCalledWith('update_series_rule', { p_series_id: 's1', p_frequency: 'biweekly', p_ends_on: null }),
+    );
+  });
+
+  it('shows a co-host of only this date neither series actions nor owner actions', async () => {
+    mockUserId = 'cohost';
+    await render(<EventDetail />);
+    expect(await screen.findByTestId('leave-co-host')).toBeTruthy();
+    expect(screen.queryByTestId('repeat-settings')).toBeNull();
+    expect(screen.queryByTestId('end-series')).toBeNull();
+    expect(screen.queryByTestId('cancel-event')).toBeNull();
   });
 });
