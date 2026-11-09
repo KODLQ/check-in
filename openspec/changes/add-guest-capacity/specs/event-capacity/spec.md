@@ -95,22 +95,26 @@ When a host sets capacity below the current Going heads, the system SHALL keep e
 - **THEN** every waitlisted guest is promoted to Going
 
 ### Requirement: Host manages waitlist
-The host SHALL be able to promote any waitlisted guest to Going or remove them, regardless of their waitlist position. Promoting past capacity SHALL require the host to confirm and SHALL be allowed.
+The host and co-hosts SHALL be able to promote any waitlisted guest to Going or remove them, regardless of their waitlist position. Promoting past capacity SHALL require the host or co-host to confirm and SHALL be allowed.
 
 #### Scenario: Host promotes a waitlisted guest
-- **WHEN** the host promotes the third guest on the waitlist while spots remain
+- **WHEN** the host promotes the third guest on the waitlist, confirming going over capacity if their party does not fit the spots left
 - **THEN** that guest becomes Going and the others keep their order
 
 #### Scenario: Host promotes past capacity
 - **WHEN** the host promotes a waitlisted guest on a full event and confirms going over capacity
 - **THEN** that guest becomes Going and the Going heads exceed capacity
 
+#### Scenario: Co-host manages the waitlist
+- **WHEN** a co-host promotes or removes a waitlisted guest
+- **THEN** the change is applied as if the owner had made it
+
 #### Scenario: Non-host tries to promote
-- **WHEN** anyone other than the host tries to promote a waitlisted guest
+- **WHEN** anyone other than the host or a co-host tries to promote a waitlisted guest
 - **THEN** the request is rejected and nothing changes
 
 ### Requirement: Promotion notice
-A guest promoted from the waitlist SHALL see that they got a spot the next time they open the invite, without needing any notification channel. When the event-updates notification capability is available, the system SHALL also notify them through it.
+A guest promoted from the waitlist, automatically or by the host, SHALL see that they got a spot the next time they open the invite, without needing any notification channel. The system SHALL also notify them once per promotion through the notification system: push for app users, email for web guests who opted in to updates. A guest who joins as Going directly, or whose own change gets them in, SHALL NOT get this notification.
 
 #### Scenario: Promoted guest opens invite
 - **WHEN** a guest who was promoted opens the invite on the same device
@@ -119,3 +123,15 @@ A guest promoted from the waitlist SHALL see that they got a spot the next time 
 #### Scenario: Notifications unavailable
 - **WHEN** a guest is promoted and no notification can be delivered to them
 - **THEN** their response is still Going in the host list and on the invite page
+
+#### Scenario: Promoted app user gets a push
+- **WHEN** a waitlisted signed-in guest who allowed notifications is promoted
+- **THEN** they get one push saying they got a spot, which opens the invite
+
+#### Scenario: Promoted web guest with email updates
+- **WHEN** a waitlisted web guest who opted in to email updates is promoted
+- **THEN** they get one email saying they got a spot
+
+#### Scenario: No longer going at send time
+- **WHEN** a promoted guest changes to Can't go before the notification is sent
+- **THEN** the notification is not sent

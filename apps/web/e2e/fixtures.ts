@@ -29,17 +29,23 @@ export async function createEvent(opts: {
   cancelled?: boolean;
   guestListVisible?: boolean;
   location?: string;
+  /** Guests (add-guest-capacity). */
+  capacity?: number | null;
+  allowPlusOnes?: boolean;
+  maxPlusOnes?: number;
 } = {}): Promise<string> {
   await ensureHost();
   const token = `E2e${Date.now().toString(36)}${counter++}`.padEnd(12, 'x').slice(0, 12);
   await sql.begin(async (tx) => {
     await tx`set local session_replication_role = replica`;
     const [ev] = await tx`
-      insert into public.events (host_id, title, starts_at, location_text, cancelled_at, guest_list_visible)
+      insert into public.events (host_id, title, starts_at, location_text, cancelled_at, guest_list_visible,
+                                 capacity, allow_plus_ones, max_plus_ones)
       values (${HOST_ID}, ${opts.title ?? 'E2E Party'},
               now() + make_interval(hours => ${opts.startsInHours ?? 48}),
               ${opts.location ?? 'Secret Street 42'},
-              ${opts.cancelled ? new Date() : null}, ${opts.guestListVisible ?? true})
+              ${opts.cancelled ? new Date() : null}, ${opts.guestListVisible ?? true},
+              ${opts.capacity ?? null}, ${opts.allowPlusOnes ?? false}, ${opts.maxPlusOnes ?? 1})
       returning id`;
     await tx`insert into public.event_invites (token, event_id) values (${token}, ${ev!.id})`;
   });

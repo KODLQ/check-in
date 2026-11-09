@@ -66,11 +66,13 @@ describe('my invite screen', () => {
     expect(screen.queryByTestId('withdraw')).toBeNull();
   });
 
-  it('withdraws through a self-delete and navigates back', async () => {
-    rpc.mockResolvedValue({ data: detail('active'), error: null });
-    const eqUser = jest.fn().mockResolvedValue({ error: null });
+  it('withdraws through remove_rsvp (so a freed spot goes to the waitlist) and navigates back', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'remove_rsvp' ? { data: true, error: null } : { data: detail('active'), error: null },
+    );
+    const eqUser = jest.fn(() => ({ maybeSingle: async () => ({ data: { id: 'r-1' }, error: null }) }));
     const eqEvent = jest.fn(() => ({ eq: eqUser }));
-    (supabase.from as jest.Mock).mockReturnValue({ delete: () => ({ eq: eqEvent }) });
+    (supabase.from as jest.Mock).mockReturnValue({ select: () => ({ eq: eqEvent }) });
     const alert = jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => {
       void buttons?.find((b) => b.style === 'destructive')?.onPress?.();
     });
@@ -81,7 +83,77 @@ describe('my invite screen', () => {
     expect(supabase.from).toHaveBeenCalledWith('rsvps');
     expect(eqEvent).toHaveBeenCalledWith('event_id', 'ev-1');
     expect(eqUser).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(rpc).toHaveBeenCalledWith('remove_rsvp', { p_rsvp_id: 'r-1' });
     alert.mockRestore();
+  });
+
+  it('Going on a full event joins the waitlist and shows the position (add-guest-capacity)', async () => {
+    let status = 'maybe';
+    rpc.mockImplementation(async (fn: string, args: { p_status?: string }) => {
+      if (fn === 'set_my_rsvp') status = args.p_status === 'going' ? 'waitlisted' : args.p_status!;
+      const d = detail('active', status);
+      return {
+        data:
+          fn === 'get_my_invite'
+            ? {
+                ...d,
+                counts: { going: 4, maybe: 1, waitlist: status === 'waitlisted' ? 1 : 0, spots_left: 0, full: true },
+                my_rsvp: { status, display_name: 'Sara B', plus_ones: 0, waitlist_position: status === 'waitlisted' ? 1 : null, promoted: false },
+              }
+            : { status },
+        error: null,
+      };
+    });
+    await render(<MyInviteScreen />);
+    expect(await screen.findByTestId('answer-going')).toHaveTextContent('Full — join waitlist');
+    expect(screen.getByTestId('counts')).toHaveTextContent('4 people going · Full');
+    await fireEvent.press(screen.getByTestId('answer-going'));
+    await waitFor(() => expect(screen.getByTestId('my-answer')).toHaveTextContent("You're on the waitlist — #1"));
+    expect(screen.getByTestId('counts')).toHaveTextContent('4 people going · Full · 1 on the waitlist');
+  });
+
+  it('sends plus-ones with Going, shows "Going +2" and "You got a spot!"', async () => {
+    let plus = 0;
+    rpc.mockImplementation(async (fn: string, args: { p_plus_ones?: number }) => {
+      if (fn === 'set_my_rsvp') plus = args.p_plus_ones ?? plus;
+      const d = detail('active', 'going');
+      return {
+        data:
+          fn === 'get_my_invite'
+            ? {
+                ...d,
+                event: { ...d.event, allow_plus_ones: true, max_plus_ones: 2 },
+                my_rsvp: { status: 'going', display_name: 'Sara B', plus_ones: plus, waitlist_position: null, promoted: plus === 0 },
+              }
+            : {},
+        error: null,
+      };
+    });
+    await render(<MyInviteScreen />);
+    expect(await screen.findByTestId('got-a-spot')).toHaveTextContent('You got a spot!');
+    await fireEvent.press(screen.getByTestId('plus-ones-increase'));
+    await fireEvent.press(screen.getByTestId('plus-ones-increase'));
+    expect(screen.getByTestId('plus-ones-increase')).toBeDisabled();
+    await fireEvent.press(screen.getByTestId('answer-going'));
+    await waitFor(() => expect(screen.getByTestId('my-answer')).toHaveTextContent('Your answer: Going +2'));
+    expect(rpc).toHaveBeenCalledWith('set_my_rsvp', { p_event_id: 'ev-1', p_status: 'going', p_plus_ones: 2 });
+    expect(screen.queryByTestId('got-a-spot')).toBeNull();
+  });
+
+  it('shows how many spots are left when more plus-ones do not fit', async () => {
+    rpc.mockImplementation(async (fn: string) => {
+      const d = detail('active', 'going');
+      if (fn === 'set_my_rsvp') return { data: null, error: { message: 'capacity_exceeded', details: '1' } };
+      return {
+        data: { ...d, event: { ...d.event, allow_plus_ones: true, max_plus_ones: 3 }, my_rsvp: { status: 'going', display_name: 'S', plus_ones: 0 } },
+        error: null,
+      };
+    });
+    await render(<MyInviteScreen />);
+    await fireEvent.press(await screen.findByTestId('plus-ones-increase'));
+    await fireEvent.press(screen.getByTestId('plus-ones-increase'));
+    await fireEvent.press(screen.getByTestId('answer-going'));
+    expect(await screen.findByText("Only 1 spot left. Your answer wasn't changed.")).toBeTruthy();
   });
 
   it('shows not found for an event the user has not answered', async () => {

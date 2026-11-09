@@ -31,7 +31,15 @@
     "invalid_invite": "This co-host invite is no longer valid",
     "already_host": "You already host this event",
     "invalid_cover": "That image can't be used. Pick it again.",
-    "no_access": "You can no longer edit this event"
+    "no_access": "You can no longer edit this event",
+    "too_many_plus_ones": "You can bring at most {{max}} friends",
+    "plus_ones_not_allowed": "The host isn't allowing plus-ones",
+    "capacity_exceeded": "Only {{count}} spots left. Your answer wasn't changed.",
+    "capacity_exceeded_one": "Only 1 spot left. Your answer wasn't changed.",
+    "invalid_status": "That answer isn't possible",
+    "capacity_invalid": "Enter a number from 1 to 3000, or leave it empty",
+    "max_plus_ones_invalid": "Pick 1 to 5",
+    "not_waitlisted": "That guest is no longer on the waitlist"
   },
   "auth": {
     "welcome": "Plan something.",
@@ -95,7 +103,26 @@
     "plan_own_body": "You've got invites — now it's your turn to host.",
     "plan_own_cta": "Plan your own",
     "dismiss": "Not now",
-    "co_host_badge": "Co-host"
+    "co_host_badge": "Co-host",
+    "guests_section": "Guests",
+    "guests_summary_default": "No plus-ones · No limit",
+    "guests_summary": "{{plus}} · {{limit}}",
+    "plus_ones_off": "No plus-ones",
+    "plus_ones_up_to": "Up to +{{count}} each",
+    "no_limit": "No limit",
+    "limit_of": "Max {{count}}",
+    "allow_plus_ones": "Guests can bring friends",
+    "max_plus_ones": "Friends per guest",
+    "capacity": "Max attendees",
+    "capacity_placeholder": "No limit",
+    "capacity_hint": "Counts guests and their friends. When it's full, new guests join a waitlist.",
+    "going_of_capacity": "{{count}} / {{capacity}} going",
+    "waitlist": "Waitlist",
+    "waitlist_count": "{{count}} waitlisted",
+    "promote": "Promote",
+    "promote_over_title": "Go over capacity?",
+    "promote_over_body": "{{name}} needs {{needed}} spots and {{left}} are left. Promote anyway?",
+    "promote_anyway": "Promote anyway"
   },
   "rsvp": {
     "going": "Going",
@@ -117,7 +144,20 @@
     "email_turn_off": "Turn off",
     "email_add": "Get updates by email",
     "email_save": "Save email",
-    "email_rate_limited": "Your reply is saved, but we couldn't turn on email updates for this address today."
+    "email_rate_limited": "Your reply is saved, but we couldn't turn on email updates for this address today.",
+    "waitlisted": "Waitlist",
+    "going_plus": "Going +{{count}}",
+    "plus_ones_label": "Friends you're bringing",
+    "plus_ones_hint": "Up to {{max}}",
+    "plus_ones_decrease": "One friend fewer",
+    "plus_ones_increase": "One friend more",
+    "full_join_waitlist": "Full — join waitlist",
+    "waitlist_position": "You're on the waitlist — #{{position}}",
+    "got_a_spot": "You got a spot!",
+    "full": "Full",
+    "spots_left": "{{count}} spots left",
+    "spots_left_one": "1 spot left",
+    "waitlist_count": "{{count}} on the waitlist"
   },
   "invite": {
     "hosted_by": "Hosted by {{name}}",
@@ -188,6 +228,11 @@
       "one": "{{name}}: {{status}}",
       "many": "{{count}} new replies: {{names}}",
       "more": "+{{count}} more"
+    },
+    "waitlist_promoted": {
+      "title": "You got a spot at {{title}}",
+      "subject": "You got a spot: {{title}}",
+      "body": "A spot opened up and you're now going. {{when}} · {{where}}"
     },
     "email": {
       "view_invite": "View the invite",

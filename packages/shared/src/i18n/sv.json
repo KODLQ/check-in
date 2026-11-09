@@ -31,7 +31,15 @@
     "invalid_invite": "Den här medvärdsinbjudan gäller inte längre",
     "already_host": "Du är redan värd för eventet",
     "invalid_cover": "Bilden kan inte användas. Välj den igen.",
-    "no_access": "Du kan inte längre redigera det här eventet"
+    "no_access": "Du kan inte längre redigera det här eventet",
+    "too_many_plus_ones": "Du kan ta med högst {{max}} vänner",
+    "plus_ones_not_allowed": "Värden tillåter inte att man tar med någon",
+    "capacity_exceeded": "Bara {{count}} platser kvar. Ditt svar ändrades inte.",
+    "capacity_exceeded_one": "Bara 1 plats kvar. Ditt svar ändrades inte.",
+    "invalid_status": "Det svaret går inte att välja",
+    "capacity_invalid": "Ange ett tal från 1 till 3000, eller lämna tomt",
+    "max_plus_ones_invalid": "Välj 1 till 5",
+    "not_waitlisted": "Gästen står inte längre på väntelistan"
   },
   "auth": {
     "welcome": "Hitta på något.",
@@ -95,7 +103,26 @@
     "plan_own_body": "Du har fått inbjudningar — nu är det din tur att bjuda.",
     "plan_own_cta": "Planera ditt eget",
     "dismiss": "Inte nu",
-    "co_host_badge": "Medvärd"
+    "co_host_badge": "Medvärd",
+    "guests_section": "Gäster",
+    "guests_summary_default": "Inga extra gäster · Ingen gräns",
+    "guests_summary": "{{plus}} · {{limit}}",
+    "plus_ones_off": "Inga extra gäster",
+    "plus_ones_up_to": "Upp till +{{count}} var",
+    "no_limit": "Ingen gräns",
+    "limit_of": "Max {{count}}",
+    "allow_plus_ones": "Gäster får ta med vänner",
+    "max_plus_ones": "Vänner per gäst",
+    "capacity": "Max antal deltagare",
+    "capacity_placeholder": "Ingen gräns",
+    "capacity_hint": "Räknar gäster och deras vänner. När det är fullt hamnar nya gäster på en väntelista.",
+    "going_of_capacity": "{{count}} / {{capacity}} kommer",
+    "waitlist": "Väntelista",
+    "waitlist_count": "{{count}} på väntelistan",
+    "promote": "Ge plats",
+    "promote_over_title": "Gå över maxantalet?",
+    "promote_over_body": "{{name}} behöver {{needed}} platser och {{left}} är kvar. Ge plats ändå?",
+    "promote_anyway": "Ge plats ändå"
   },
   "rsvp": {
     "going": "Kommer",
@@ -117,7 +144,20 @@
     "email_turn_off": "Stäng av",
     "email_add": "Få uppdateringar via mejl",
     "email_save": "Spara mejl",
-    "email_rate_limited": "Ditt svar är sparat, men vi kunde inte slå på mejluppdateringar för den här adressen i dag."
+    "email_rate_limited": "Ditt svar är sparat, men vi kunde inte slå på mejluppdateringar för den här adressen i dag.",
+    "waitlisted": "Väntelista",
+    "going_plus": "Kommer +{{count}}",
+    "plus_ones_label": "Vänner du tar med",
+    "plus_ones_hint": "Upp till {{max}}",
+    "plus_ones_decrease": "En vän färre",
+    "plus_ones_increase": "En vän till",
+    "full_join_waitlist": "Fullt — ställ dig på väntelistan",
+    "waitlist_position": "Du står på väntelistan — #{{position}}",
+    "got_a_spot": "Du fick en plats!",
+    "full": "Fullt",
+    "spots_left": "{{count}} platser kvar",
+    "spots_left_one": "1 plats kvar",
+    "waitlist_count": "{{count}} på väntelistan"
   },
   "invite": {
     "hosted_by": "Värd: {{name}}",
@@ -188,6 +228,11 @@
       "one": "{{name}}: {{status}}",
       "many": "{{count}} nya svar: {{names}}",
       "more": "+{{count}} till"
+    },
+    "waitlist_promoted": {
+      "title": "Du fick en plats på {{title}}",
+      "subject": "Du fick en plats: {{title}}",
+      "body": "En plats blev ledig och nu kommer du. {{when}} · {{where}}"
     },
     "email": {
       "view_invite": "Visa inbjudan",

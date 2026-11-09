@@ -26,7 +26,7 @@ export interface RenderContext {
   hostName?: string | null;
   payload?: { changed?: string[] } & Record<string, unknown>;
   announcement?: { body: string | null } | null;
-  replies?: { display_name: string; status: 'going' | 'maybe' | 'declined' }[] | null;
+  replies?: { display_name: string; status: 'going' | 'maybe' | 'declined' | 'waitlisted' }[] | null;
 }
 
 export interface PushContext extends RenderContext {
@@ -181,6 +181,16 @@ export const TEMPLATES: Record<NotificationKind, KindTemplate> = {
     push: (ctx, l) => ({
       title: translate(l, 'notifications.rsvp_digest.title', vars(ctx, l)),
       body: digestBody(ctx, l),
+    }),
+  },
+  waitlist_promoted: {
+    push: (ctx, l) => ({
+      title: translate(l, 'notifications.waitlist_promoted.title', vars(ctx, l)),
+      body: translate(l, 'notifications.waitlist_promoted.body', vars(ctx, l)),
+    }),
+    email: (ctx, l) => ({
+      subject: translate(l, 'notifications.waitlist_promoted.subject', vars(ctx, l)),
+      paragraphs: [translate(l, 'notifications.waitlist_promoted.body', vars(ctx, l))],
     }),
   },
 };

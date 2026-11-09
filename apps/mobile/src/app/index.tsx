@@ -1,6 +1,7 @@
 import {
   buildHomeSections,
   formatEventTime,
+  headCount,
   hostingNudge,
   type HomeItem,
   type MyInvite,
@@ -26,7 +27,7 @@ import { consumePendingCoHostInvite } from '@/lib/pending-co-host';
 import { onInvitesClaimed } from '@/lib/pending-claim';
 import { supabase, type EventRow } from '@/lib/supabase';
 
-type HostedEvent = EventRow & { rsvps: { status: string }[] };
+type HostedEvent = EventRow & { rsvps: { status: string; plus_ones: number }[] };
 type Item = HomeItem<HostedEvent, MyInvite>;
 
 /** "Plan your own" card dismissal is remembered on this device for 7 days. */
@@ -94,7 +95,7 @@ export default function Events() {
 
   const load = useCallback(async () => {
     const [events, mine] = await Promise.all([
-      supabase.from('events').select('*, rsvps(status)').order('starts_at', { ascending: true }),
+      supabase.from('events').select('*, rsvps(status, plus_ones)').order('starts_at', { ascending: true }),
       supabase.rpc('list_my_invites'),
     ]);
     setHosted((events.data as HostedEvent[] | null) ?? []);
@@ -140,14 +141,23 @@ export default function Events() {
     let detail: string;
     let onPress: () => void;
     if (item.kind === 'hosted') {
-      const going = item.event.rsvps.filter((r) => r.status === 'going').length;
+      // Going counts heads (guests + plus-ones), against the capacity when there is one.
+      const going = headCount(item.event.rsvps);
       const maybe = item.event.rsvps.filter((r) => r.status === 'maybe').length;
-      detail = `${t('events.going_count', { count: going })} · ${t('events.maybe_count', { count: maybe })}`;
+      const goingText =
+        item.event.capacity != null
+          ? t('events.going_of_capacity', { count: going, capacity: item.event.capacity })
+          : t('events.going_count', { count: going });
+      detail = `${goingText} · ${t('events.maybe_count', { count: maybe })}`;
       onPress = () => router.push(`/events/${item.id}`);
     } else {
+      const mine = item.event.my_rsvp;
       detail = t('events.hosted_by_answer', {
         name: item.event.host.display_name ?? '',
-        status: t(`rsvp.${item.event.my_rsvp.status}`),
+        status:
+          mine.status === 'going' && (mine.plus_ones ?? 0) > 0
+            ? t('rsvp.going_plus', { count: mine.plus_ones })
+            : t(`rsvp.${mine.status}`),
       });
       onPress = () => router.push(`/invites/${item.id}`);
     }

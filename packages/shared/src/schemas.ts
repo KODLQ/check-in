@@ -1,7 +1,15 @@
 import { z } from 'zod';
 
+/** Answers a guest can give. */
 export const RSVP_STATUSES = ['going', 'maybe', 'declined'] as const;
 export type RsvpStatus = (typeof RSVP_STATUSES)[number];
+/** Stored response status: an answer, or Going put on the waitlist by the system (add-guest-capacity). */
+export type RsvpState = RsvpStatus | 'waitlisted';
+
+/** Plus-ones per guest: the host picks a maximum of 1..5 (mirrors the DB check constraints). */
+export const MAX_PLUS_ONES = 5;
+/** Largest capacity an event can have: 500 responses x (1 + 5 plus-ones). */
+export const MAX_CAPACITY = 3000;
 
 export const displayNameSchema = z
   .string()
@@ -33,6 +41,20 @@ export const makeEventInputSchema = (now: () => Date = () => new Date()) =>
       longitude: z.number().min(-180).max(180).optional(),
       description: optionalText(2000),
       theme: z.string().default('sunset'),
+      // Guests (add-guest-capacity): optional, off / unlimited by default.
+      allowPlusOnes: z.boolean().default(false),
+      maxPlusOnes: z
+        .int('max_plus_ones_invalid')
+        .min(1, 'max_plus_ones_invalid')
+        .max(MAX_PLUS_ONES, 'max_plus_ones_invalid')
+        .default(1),
+      /** null/undefined = no limit. */
+      capacity: z
+        .int('capacity_invalid')
+        .min(1, 'capacity_invalid')
+        .max(MAX_CAPACITY, 'capacity_invalid')
+        .nullable()
+        .optional(),
     })
     .refine((e) => e.startsAt.getTime() > now().getTime(), {
       path: ['startsAt'],
@@ -79,6 +101,11 @@ export const rsvpInputSchema = z
     guestToken: guestTokenSchema,
     displayName: displayNameSchema,
     status: z.enum(RSVP_STATUSES),
+    /**
+     * Plus-ones with a Going answer (0..5; the event's own maximum is enforced by the database).
+     * Omitted = keep the current number (e.g. when only the email changes). Ignored for Maybe/Can't go.
+     */
+    plusOnes: z.int('too_many_plus_ones').min(0, 'too_many_plus_ones').max(MAX_PLUS_ONES, 'too_many_plus_ones').optional(),
     email: z.preprocess(
       (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
       emailSchema.nullable().optional(),

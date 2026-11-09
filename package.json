@@ -16,7 +16,8 @@
     "db:types": "supabase gen types typescript --local > packages/shared/src/database.types.ts",
     "openspec": "openspec",
     "db:worker:configure": "node supabase/scripts/configure-worker.mjs",
-    "test:functions": "cd supabase/functions && npx -y deno@2.9.6 test --allow-env --allow-net=127.0.0.1 --allow-read=.,../../packages/shared"
+    "test:functions": "cd supabase/functions && npx -y deno@2.9.6 test --allow-env --allow-net=127.0.0.1 --allow-read=.,../../packages/shared",
+    "test:concurrency": "vitest run --root supabase/tests/concurrency"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

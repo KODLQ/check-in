@@ -25,11 +25,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
       - uses: supabase/setup-cli@v1
         with:
           version: latest
+      - run: npm ci
       - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
       - run: supabase test db
+      # Capacity under real concurrent transactions (add-guest-capacity): no overbooking, no deadlocks.
+      - run: npm run test:concurrency
 
   web-e2e:
     runs-on: ubuntu-latest

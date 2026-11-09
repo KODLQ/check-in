@@ -212,6 +212,46 @@ Avregistrera: https://checkin.example/u/tok123
 }
 `;
 
+exports[`notification templates > email waitlist_promoted en 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "You got a spot: Fredagshäng",
+  "text": "Fredagshäng
+
+A spot opened up and you're now going. Fri 11 Dec, 19:00 · Hornsgatan 12
+
+View the invite: https://checkin.example/i/DemoFredag01
+
+--
+You get this email because you asked for updates about this event.
+Unsubscribe: https://checkin.example/u/tok123
+",
+}
+`;
+
+exports[`notification templates > email waitlist_promoted sv 1`] = `
+{
+  "headers": {
+    "List-Unsubscribe": "<https://checkin.example/api/unsubscribe/tok123>",
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  },
+  "subject": "Du fick en plats: Fredagshäng",
+  "text": "Fredagshäng
+
+En plats blev ledig och nu kommer du. fre 11 dec. 19:00 · Hornsgatan 12
+
+Visa inbjudan: https://checkin.example/i/DemoFredag01
+
+--
+Du får det här mejlet för att du bad om uppdateringar om det här eventet.
+Avregistrera: https://checkin.example/u/tok123
+",
+}
+`;
+
 exports[`notification templates > push announcement en 1`] = `
 {
   "body": "Demo Host: Doors open 19:30, ring Andersson",
@@ -319,5 +359,27 @@ exports[`notification templates > push rsvp_digest sv 1`] = `
     "url": "/i/DemoFredag01",
   },
   "title": "Fredagshäng",
+}
+`;
+
+exports[`notification templates > push waitlist_promoted en 1`] = `
+{
+  "body": "A spot opened up and you're now going. Fri 11 Dec, 19:00 · Hornsgatan 12",
+  "data": {
+    "kind": "waitlist_promoted",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "You got a spot at Fredagshäng",
+}
+`;
+
+exports[`notification templates > push waitlist_promoted sv 1`] = `
+{
+  "body": "En plats blev ledig och nu kommer du. fre 11 dec. 19:00 · Hornsgatan 12",
+  "data": {
+    "kind": "waitlist_promoted",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Du fick en plats på Fredagshäng",
 }
 `;

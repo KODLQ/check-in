@@ -5,5 +5,6 @@ export * from './themes';
 export * from './invite';
 export * from './home';
 export * from './hosts';
+export * from './capacity';
 export * from './i18n';
 export type { Database } from './database.types';

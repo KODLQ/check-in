@@ -54,6 +54,9 @@ export default function EditEvent() {
         theme: event.theme,
         coverPath: event.cover_path,
         guestListVisible: event.guest_list_visible,
+        allowPlusOnes: event.allow_plus_ones,
+        maxPlusOnes: event.max_plus_ones,
+        capacity: event.capacity,
       }}
       onPickCover={() => pickAndUpload('covers', `e/${id}`, [16, 9])}
       onSubmit={async (values) => {

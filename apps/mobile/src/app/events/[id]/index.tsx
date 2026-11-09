@@ -1,4 +1,4 @@
-import { formatTimeRange, hasEventEnded, inviteUrl, mapsUrl, type RsvpStatus } from '@check-in/shared';
+import { formatTimeRange, hasEventEnded, inviteUrl, mapsUrl } from '@check-in/shared';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -7,17 +7,17 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, Switch
 
 import { AnnouncementComposer, AnnouncementList, AnnouncementsCard, type AnnouncementItem } from '@/components/announcements';
 import { Cover } from '@/components/cover';
+import { GuestList, promoteGuest, type GuestRow } from '@/components/guest-list';
 import { HostsCard } from '@/components/hosts-card';
 import { StoryShareButton } from '@/components/story-share-button';
 import { Toast } from '@/components/toast';
 import { Body, Button, Card, Label, Screen, Title, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { INVITE_BASE_URL } from '@/lib/config';
-import { fetchActiveInvite } from '@/lib/events';
+import { errorKey, fetchActiveInvite } from '@/lib/events';
 import { locale } from '@/lib/i18n';
 import { supabase, type EventRow, type RsvpRow } from '@/lib/supabase';
 
-const GROUPS: RsvpStatus[] = ['going', 'maybe', 'declined'];
 /** While the screen is focused, re-check access this often so a removed co-host is told promptly. */
 const ACCESS_CHECK_MS = 30_000;
 
@@ -199,18 +199,32 @@ export default function EventDetail() {
     ]);
   }
 
-  function removeGuest(r: RsvpRow) {
+  function removeGuest(r: GuestRow) {
     Alert.alert(r.display_name, undefined, [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('rsvp.remove_guest'),
         style: 'destructive',
         onPress: async () => {
-          await supabase.from('rsvps').delete().eq('id', r.id);
+          // An RPC, not a table DELETE: it locks the event and fills freed spots from the waitlist.
+          const { error } = await supabase.rpc('remove_rsvp', { p_rsvp_id: r.id });
+          if (error) setToast(t(`errors.${errorKey(error)}`, t('common.error')));
           await loadRsvps();
         },
       },
     ]);
+  }
+
+  async function promote(r: GuestRow) {
+    const failed = await promoteGuest(
+      (fn, args) => supabase.rpc(fn, args),
+      t,
+      r,
+      rsvps,
+      event?.capacity ?? null,
+    );
+    if (failed) setToast(t(`errors.${errorKey({ message: failed })}`, t('common.error')));
+    await loadRsvps();
   }
 
   return (
@@ -273,26 +287,13 @@ export default function EventDetail() {
           <Switch value={event.guest_list_visible} onValueChange={toggleGuestList} disabled={!editable} />
         </View>
 
-        {GROUPS.map((status) => {
-          const group = rsvps.filter((r) => r.status === status);
-          return (
-            <Card key={status}>
-              <Label>
-                {t(`rsvp.${status}`)} · {group.length}
-              </Label>
-              {group.map((r) => (
-                <Pressable key={r.id} onLongPress={() => removeGuest(r)} testID={`guest-${r.display_name}`}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
-                    <Body>{r.display_name}</Body>
-                    <Pressable hitSlop={8} onPress={() => removeGuest(r)}>
-                      <Text style={{ color: c.muted }}>✕</Text>
-                    </Pressable>
-                  </View>
-                </Pressable>
-              ))}
-            </Card>
-          );
-        })}
+        <GuestList
+          rsvps={rsvps}
+          capacity={event.capacity}
+          editable={editable}
+          onRemove={removeGuest}
+          onPromote={(r) => void promote(r)}
+        />
 
         <HostsCard
           eventId={id}

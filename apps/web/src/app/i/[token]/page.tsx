@@ -126,6 +126,8 @@ export default async function InvitePage({ params }: Props) {
           strings={clientStrings(t)}
           locale={locale}
           emailUpdates={env.emailUpdatesEnabled}
+          plusOnes={e.allow_plus_ones ? { max: e.max_plus_ones } : null}
+          full={invite.counts.full}
         />
       )}
 
@@ -133,11 +135,28 @@ export default async function InvitePage({ params }: Props) {
         <strong data-testid="going-count">
           {going === 1 ? t('rsvp.people_going_one') : t('rsvp.people_going', { count: going })}
         </strong>
+        {invite.counts.spots_left !== null || invite.counts.waitlist > 0 ? (
+          <p className="muted" style={{ margin: 0 }} data-testid="capacity-line">
+            {[
+              invite.counts.full
+                ? t('rsvp.full')
+                : invite.counts.spots_left === 1
+                  ? t('rsvp.spots_left_one')
+                  : invite.counts.spots_left !== null
+                    ? t('rsvp.spots_left', { count: invite.counts.spots_left })
+                    : null,
+              invite.counts.waitlist > 0 ? t('rsvp.waitlist_count', { count: invite.counts.waitlist }) : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        ) : null}
         {invite.guests && invite.guests.length > 0 ? (
           <ul className="guests" data-testid="guest-list">
             {invite.guests.map((g, i) => (
               <li key={i}>
                 {g.display_name}
+                {g.status === 'going' && g.plus_ones > 0 ? <span className="badge"> +{g.plus_ones}</span> : null}
                 {g.status === 'maybe' ? <span className="muted"> · {t('rsvp.maybe')}</span> : null}
               </li>
             ))}

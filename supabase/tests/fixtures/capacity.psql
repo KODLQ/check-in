@@ -1,0 +1,74 @@
+-- Reusable guest-capacity fixture (change: add-guest-capacity). Include after plan() with:
+--   \ir fixtures/capacity.psql
+-- Not a test file itself (pg_prove only runs *.sql); runs inside the caller's transaction and is rolled
+-- back with it. All ids/tokens are fixed and unique to this fixture, and the helpers filter on them, so
+-- leftover local data never changes results.
+--
+-- Users: owner O, co-host K, stranger X, signed-in guests U and V.
+-- pg_temp.mk_event(id, token, capacity, allow_plus_ones, max_plus_ones) creates an upcoming event owned by O
+--   (with K as co-host) and gives its guest link the fixed token.
+-- pg_temp.g(token, name, status, plus_ones) answers as web guest <name> (one browser per name).
+-- pg_temp.st(event, name) -> status text; pg_temp.pos(event, name) -> waitlist position; pg_temp.heads(event).
+-- Switch identity with :as_O / :as_K / :as_X / :as_U / :as_V followed by `set local role authenticated;`.
+
+\set O '00000000-0000-0000-0000-0000000ca0a1'
+\set K '00000000-0000-0000-0000-0000000ca0b1'
+\set X '00000000-0000-0000-0000-0000000ca0c1'
+\set U '00000000-0000-0000-0000-0000000ca0d1'
+\set V '00000000-0000-0000-0000-0000000ca0e1'
+\set as_O 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000ca0a1","role":"authenticated"}'', true);'
+\set as_K 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000ca0b1","role":"authenticated"}'', true);'
+\set as_X 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000ca0c1","role":"authenticated"}'', true);'
+\set as_U 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000ca0d1","role":"authenticated"}'', true);'
+\set as_V 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000ca0e1","role":"authenticated"}'', true);'
+
+reset role;
+insert into auth.users (id, email) values
+  (:'O', 'cap-owner@test.dev'),
+  (:'K', 'cap-cohost@test.dev'),
+  (:'X', 'cap-stranger@test.dev'),
+  (:'U', 'cap-ulla@test.dev'),
+  (:'V', 'cap-vera@test.dev');
+update public.profiles set display_name = 'Olga' where id = :'O';
+update public.profiles set display_name = 'Kim' where id = :'K';
+update public.profiles set display_name = 'Xavier' where id = :'X';
+update public.profiles set display_name = 'Ulla' where id = :'U';
+update public.profiles set display_name = 'Vera' where id = :'V';
+
+create function pg_temp.mk_event(p_id uuid, p_token text, p_capacity int, p_allow boolean default false, p_max int default 1)
+returns uuid language plpgsql as $$
+begin
+  insert into public.events (id, host_id, title, starts_at, location_text, capacity, allow_plus_ones, max_plus_ones)
+  values (p_id, '00000000-0000-0000-0000-0000000ca0a1', 'Cap ' || p_token, now() + interval '2 days', 'Room',
+          p_capacity, p_allow, p_max);
+  update public.event_invites set token = p_token where event_id = p_id;
+  insert into public.event_co_hosts (event_id, user_id) values (p_id, '00000000-0000-0000-0000-0000000ca0b1');
+  return p_id;
+end $$;
+
+create function pg_temp.guest_token(p_name text) returns text language sql as $$
+  select rpad('capguest-' || lower(p_name) || '-', 30, 'x')
+$$;
+
+create function pg_temp.g(p_token text, p_name text, p_status text, p_plus int default null)
+returns jsonb language sql as $$
+  select public.upsert_rsvp(p_token, pg_temp.guest_token(p_name), p_name, p_status::public.rsvp_status,
+                            p_plus_ones => p_plus)
+$$;
+
+create function pg_temp.st(p_event uuid, p_name text) returns text language sql as $$
+  select status::text from public.rsvps where event_id = p_event and display_name = p_name
+$$;
+
+create function pg_temp.pos(p_event uuid, p_name text) returns int language sql as $$
+  select public.waitlist_position(r.id) from public.rsvps r where r.event_id = p_event and r.display_name = p_name
+$$;
+
+create function pg_temp.heads(p_event uuid) returns int language sql as $$
+  select public.event_going_heads(p_event)
+$$;
+
+create function pg_temp.rid(p_event uuid, p_name text) returns uuid language sql as $$
+  select id from public.rsvps where event_id = p_event and display_name = p_name
+$$;
+

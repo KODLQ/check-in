@@ -107,3 +107,40 @@ describe('announcement input', () => {
     expect(announcementInputSchema.parse({ body: `  ${'x'.repeat(500)}  ` }).body).toHaveLength(500);
   });
 });
+
+describe('guest settings (add-guest-capacity)', () => {
+  const now = new Date('2026-06-01T12:00:00Z');
+  const schema = makeEventInputSchema(() => now);
+  const valid = { title: 'Fest', startsAt: new Date('2026-06-19T16:00:00Z'), locationText: 'Hemma' };
+
+  it('defaults to no plus-ones and no capacity', () => {
+    const e = schema.parse(valid);
+    expect(e.allowPlusOnes).toBe(false);
+    expect(e.maxPlusOnes).toBe(1);
+    expect(e.capacity).toBeUndefined();
+  });
+  it('accepts plus-ones 1..5 and capacity 1..3000 (or null = no limit)', () => {
+    for (const maxPlusOnes of [1, 5]) expect(schema.safeParse({ ...valid, allowPlusOnes: true, maxPlusOnes }).success).toBe(true);
+    for (const capacity of [1, 3000, null]) expect(schema.safeParse({ ...valid, capacity }).success).toBe(true);
+  });
+  it.each([
+    ['maxPlusOnes', { maxPlusOnes: 0 }, 'max_plus_ones_invalid'],
+    ['maxPlusOnes', { maxPlusOnes: 6 }, 'max_plus_ones_invalid'],
+    ['maxPlusOnes', { maxPlusOnes: 1.5 }, 'max_plus_ones_invalid'],
+    ['capacity', { capacity: 0 }, 'capacity_invalid'],
+    ['capacity', { capacity: 3001 }, 'capacity_invalid'],
+    ['capacity', { capacity: 2.5 }, 'capacity_invalid'],
+  ])('rejects invalid %s %j', (field, patch, key) => {
+    expect(fieldErrors(schema.safeParse({ ...valid, ...patch }))?.[field]).toBe(key);
+  });
+});
+
+describe('rsvp plus-ones', () => {
+  const ok = { token: 'AbCdEf123456', guestToken: 'x'.repeat(22), displayName: 'Anna', status: 'going' };
+  it('is optional (omitted = keep the current number)', () =>
+    expect(rsvpInputSchema.parse(ok).plusOnes).toBeUndefined());
+  it.each([0, 1, 5])('accepts %i', (plusOnes) =>
+    expect(rsvpInputSchema.parse({ ...ok, plusOnes }).plusOnes).toBe(plusOnes));
+  it.each([-1, 6, 1.5])('rejects %s', (plusOnes) =>
+    expect(fieldErrors(rsvpInputSchema.safeParse({ ...ok, plusOnes }))?.plusOnes).toBe('too_many_plus_ones'));
+});

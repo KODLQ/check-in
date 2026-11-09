@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(60);
+select plan(61);
 
 -- Users: host H, guest-with-account S ("Sara Berg"), B, C (no RSVPs), R (rate limit), N (no name yet).
 insert into auth.users (id, email) values
@@ -205,7 +205,7 @@ select is((select array_agg(x ->> 'title' order by x ->> 'title') from jsonb_arr
 select is((select x -> 'state' from jsonb_array_elements(list_my_invites()) x where x ->> 'title' = 'E3'), '"past"'::jsonb, 'ended invites are past');
 select is((select x -> 'state' from jsonb_array_elements(list_my_invites()) x where x ->> 'title' = 'E4'), '"cancelled"'::jsonb, 'cancelled invites are cancelled');
 select is((select x -> 'my_rsvp' from jsonb_array_elements(list_my_invites()) x where x ->> 'title' = 'E1'),
-  '{"status": "going", "display_name": "Sara B"}'::jsonb, 'each invite carries the own answer');
+  '{"status": "going", "display_name": "Sara B", "plus_ones": 0}'::jsonb, 'each invite carries the own answer');
 select is((select x -> 'host' ->> 'display_name' from jsonb_array_elements(list_my_invites()) x where x ->> 'title' = 'E1'), 'Hosty', 'host name is included');
 select is((select count(*)::int from jsonb_array_elements(list_my_invites()) x where x ? 'location_text' or x ? 'token' or x -> 'event' ? 'location_text'),
   0, 'no invite token or location in the list');
@@ -240,15 +240,16 @@ update event_invites set revoked_at = now() where event_id = 'a0000000-0000-0000
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
 select is(get_my_invite('a0000000-0000-0000-0000-000000000001') -> 'guests', 'null'::jsonb, 'hidden guest list shows no names');
-select is(set_my_rsvp('a0000000-0000-0000-0000-000000000001', 'maybe'), '{"status": "maybe", "display_name": "Sara B"}'::jsonb,
+select ok(set_my_rsvp('a0000000-0000-0000-0000-000000000001', 'maybe') @> '{"status": "maybe", "display_name": "Sara B"}'::jsonb,
   'set_my_rsvp works after the link was revoked');
 select is((select count(*)::int from rsvps where event_id = 'a0000000-0000-0000-0000-000000000001' and user_id = '00000000-0000-0000-0000-0000000000a2'),
   1, 'set_my_rsvp updates the single row');
 select throws_ok($$ select set_my_rsvp('a0000000-0000-0000-0000-000000000004', 'maybe') $$, 'P0001', 'event_closed', 'cancelled events are closed');
 select throws_ok($$ select set_my_rsvp('a0000000-0000-0000-0000-000000000003', 'maybe') $$, 'P0001', 'event_closed', 'ended events are closed');
-delete from rsvps where event_id = 'a0000000-0000-0000-0000-000000000002';
+-- add-guest-capacity: withdrawing goes through remove_rsvp (direct DELETE is no longer allowed).
+select ok(remove_rsvp((select id from rsvps where event_id = 'a0000000-0000-0000-0000-000000000002')), 'remove_rsvp withdraws the own response');
 reset role;
-select is((select count(*)::int from rsvps where event_id = 'a0000000-0000-0000-0000-000000000002'), 0, 'a user can withdraw their own response through RLS');
+select is((select count(*)::int from rsvps where event_id = 'a0000000-0000-0000-0000-000000000002'), 0, 'a user can withdraw their own response');
 
 -- ===== 2.4 account deletion removes claimed responses =====
 delete from auth.users where id = '00000000-0000-0000-0000-0000000000a2';

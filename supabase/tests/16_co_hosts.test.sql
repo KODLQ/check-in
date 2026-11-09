@@ -143,13 +143,13 @@ set local role authenticated;
 :as_B
 select is((select array_agg(status::text order by status) from public.rsvps where event_id = :'E1'),
   array['going', 'going', 'maybe', 'declined'], 'co-host B sees every response including Can''t go');
-select lives_ok($$ delete from public.rsvps where id = 'c0000000-0000-0000-0000-0000000000f4' $$, 'co-host B can remove a guest');
+select ok(public.remove_rsvp('c0000000-0000-0000-0000-0000000000f4'), 'co-host B can remove a guest');
 :as_C
 select is((select count(*)::int from public.rsvps where event_id = :'E1'), 0, 'stranger C sees no RSVPs');
-delete from public.rsvps where event_id = :'E1';
+select public.remove_rsvp('c0000000-0000-0000-0000-0000000000f1');
 :as_D
 select is((select count(*)::int from public.rsvps where event_id = :'E1'), 0, 'former co-host D sees no RSVPs');
-delete from public.rsvps where event_id = :'E1';
+select public.remove_rsvp('c0000000-0000-0000-0000-0000000000f1');
 :as_S
 select is((select array_agg(display_name) from public.rsvps where event_id = :'E1'), array['Sara'],
   'a signed-in guest sees only their own response');

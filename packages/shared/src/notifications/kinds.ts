@@ -25,6 +25,7 @@ export const NOTIFICATION_KINDS = {
   event_reminder: { urgent: false, channels: ['push', 'email'], staleAfterStart: true },
   announcement: { urgent: false, channels: ['push', 'email'], staleAfterStart: true },
   rsvp_digest: { urgent: false, channels: ['push'], staleAfterStart: false },
+  waitlist_promoted: { urgent: false, channels: ['push', 'email'], staleAfterStart: true },
 } as const satisfies Record<string, NotificationKindConfig>;
 
 export type NotificationKind = keyof typeof NOTIFICATION_KINDS;

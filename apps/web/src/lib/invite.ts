@@ -5,6 +5,7 @@ import {
   hostedByKey,
   isValidInviteToken,
   type Locale,
+  type RsvpState,
   type RsvpStatus,
 } from '@check-in/shared';
 import { cache } from 'react';
@@ -25,6 +26,10 @@ export interface InviteEvent {
   theme: string;
   time_changed_at: string | null;
   guest_list_visible: boolean;
+  /** Guests (add-guest-capacity). */
+  allow_plus_ones: boolean;
+  max_plus_ones: number;
+  capacity: number | null;
 }
 
 export interface EmailUpdates {
@@ -34,9 +39,24 @@ export interface EmailUpdates {
 }
 
 export interface MyRsvp {
-  status: RsvpStatus;
+  status: RsvpState;
   display_name: string;
+  plus_ones: number;
+  /** 1-based, only while waitlisted. */
+  waitlist_position: number | null;
+  /** Promoted from the waitlist and hasn't changed the answer since ("You got a spot!"). */
+  promoted: boolean;
   email_updates?: EmailUpdates;
+}
+
+/** Head-based counts: Going and waitlist count guests plus their plus-ones. */
+export interface InviteCounts {
+  going: number;
+  maybe: number;
+  waitlist: number;
+  /** null when the event has no capacity. */
+  spots_left: number | null;
+  full: boolean;
 }
 
 export interface Announcement {
@@ -54,8 +74,9 @@ export type Invite =
       host: { display_name: string | null; avatar_path: string | null };
       /** Co-host display names, in the order they joined (add-co-hosts). */
       co_hosts?: { display_name: string | null }[];
-      counts: { going: number; maybe: number };
-      guests: { display_name: string; status: RsvpStatus }[] | null;
+      counts: InviteCounts;
+      /** Going and Maybe only; waitlisted guests are never listed. */
+      guests: { display_name: string; status: RsvpStatus; plus_ones: number }[] | null;
       my_rsvp: MyRsvp | null;
       announcements: Announcement[];
     };

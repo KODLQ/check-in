@@ -162,6 +162,29 @@ describe('home list', () => {
     expect(router.push).toHaveBeenCalledWith('/events/h2');
   });
 
+  it('counts Going heads with plus-ones, against the capacity when set (add-guest-capacity)', async () => {
+    const tenPlusFour = [
+      ...Array.from({ length: 10 }, (_, i) => ({ status: 'going', plus_ones: i < 4 ? 1 : 0 })),
+      { status: 'waitlisted', plus_ones: 2 },
+      { status: 'maybe', plus_ones: 0 },
+    ];
+    mockData(
+      [
+        { ...hostedEvent('h1', 'Flat party', 3), capacity: 30, rsvps: tenPlusFour },
+        { ...hostedEvent('h2', 'Open picnic', 4), capacity: null, rsvps: [{ status: 'going', plus_ones: 2 }] },
+      ],
+      [
+        { ...invite('i1', 'Lina birthday', 1, 'going'), my_rsvp: { status: 'going', display_name: 'S', plus_ones: 2 } },
+        invite('i2', 'Small dinner', 2, 'waitlisted'),
+      ],
+    );
+    await render(<Events />);
+    expect(await screen.findByTestId('event-h1')).toHaveTextContent(/14 \/ 30 going · 1 maybe/);
+    expect(screen.getByTestId('event-h2')).toHaveTextContent(/3 going · 0 maybe/);
+    expect(screen.getByTestId('invite-i1')).toHaveTextContent(/Your answer: Going \+2/);
+    expect(screen.getByTestId('invite-i2')).toHaveTextContent(/Your answer: Waitlist/);
+  });
+
   it('resumes a co-host link that was opened before signing in', async () => {
     const token = 'AbCdEfGhIjKlMnOpQrStUv';
     await AsyncStorage.setItem('ci_pending_co_host', JSON.stringify({ token, savedAt: Date.now() }));

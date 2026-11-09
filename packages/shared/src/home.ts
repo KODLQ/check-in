@@ -1,5 +1,5 @@
 import { hasEventEnded } from './dates';
-import type { RsvpStatus } from './schemas';
+import type { RsvpState } from './schemas';
 
 /** Minimal timing fields shared by hosted events and invites. */
 export interface EventTiming {
@@ -16,7 +16,7 @@ export interface MyInvite extends EventTiming {
   theme: string;
   state: 'active' | 'past' | 'cancelled';
   host: { display_name: string | null };
-  my_rsvp: { status: RsvpStatus; display_name: string };
+  my_rsvp: { status: RsvpState; display_name: string; plus_ones?: number };
 }
 
 export type HomeItem<H, I> =

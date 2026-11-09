@@ -88,12 +88,73 @@ function PlanYourOwn({ strings }: { strings: ClientStrings }) {
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
+/** "+ friends" stepper (0..max), sent with a Going answer. */
+function PlusOnes({
+  value,
+  max,
+  disabled,
+  onChange,
+  strings,
+}: {
+  value: number;
+  max: number;
+  disabled: boolean;
+  onChange: (n: number) => void;
+  strings: ClientStrings;
+}) {
+  return (
+    <div className="stepper" data-testid="plus-ones">
+      <span>
+        {strings.plusOnesLabel}{' '}
+        <span className="muted">({strings.plusOnesHint.replace('{{max}}', String(max))})</span>
+      </span>
+      <span className="stepper-controls">
+        <button
+          type="button"
+          className="btn"
+          aria-label={strings.plusOnesDecrease}
+          disabled={disabled || value <= 0}
+          onClick={() => onChange(value - 1)}
+        >
+          −
+        </button>
+        <output aria-live="polite" data-testid="plus-ones-value">
+          {value}
+        </output>
+        <button
+          type="button"
+          className="btn"
+          aria-label={strings.plusOnesIncrease}
+          disabled={disabled || value >= max}
+          onClick={() => onChange(value + 1)}
+        >
+          +
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/** The guest's own answer line: "Going +2", "You're on the waitlist — #3", "You got a spot!". */
+function answerText(current: MyRsvp, strings: ClientStrings): string {
+  if (current.status === 'waitlisted') {
+    return strings.waitlistPosition.replace('{{position}}', String(current.waitlist_position ?? ''));
+  }
+  const label =
+    current.status === 'going' && current.plus_ones > 0
+      ? strings.goingPlus.replace('{{count}}', String(current.plus_ones))
+      : strings[current.status];
+  return strings.yourAnswer.replace('{{status}}', label);
+}
+
 export function RsvpForm({
   token,
   current,
   strings,
   locale,
   emailUpdates,
+  plusOnes,
+  full,
 }: {
   token: string;
   current: MyRsvp | null;
@@ -101,6 +162,10 @@ export function RsvpForm({
   locale: 'en' | 'sv';
   /** Email opt-in is offered (feature flag). */
   emailUpdates: boolean;
+  /** The host's plus-one setting (null = not allowed). */
+  plusOnes: { max: number } | null;
+  /** No spot left: Going joins the waitlist. */
+  full: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState(current?.display_name ?? '');
@@ -114,6 +179,15 @@ export function RsvpForm({
   const [pending, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
   const subscribed = current?.email_updates?.state === 'on';
+  const wantsToGo = current?.status === 'going' || current?.status === 'waitlisted';
+  const [plus, setPlus] = useState(wantsToGo ? (current?.plus_ones ?? 0) : 0);
+  // Re-sync after a refresh (e.g. the answer changed on another tab or was promoted).
+  useEffect(() => {
+    if (current?.status === 'going' || current?.status === 'waitlisted') setPlus(current.plus_ones);
+  }, [current?.status, current?.plus_ones]);
+  // The answer to re-send when only the email changes: waitlisted is "Going" from the guest's side.
+  const currentAnswer: RsvpStatus | undefined =
+    current?.status === 'waitlisted' ? 'going' : current?.status;
 
   // In-app browsers sometimes drop cookies but keep localStorage: restore and re-render.
   useEffect(() => {
@@ -166,16 +240,32 @@ export function RsvpForm({
           guestToken: getGuestToken(),
           displayName: name,
           status,
+          // Only a Going answer chosen here carries plus-ones; an email-only change keeps them.
+          ...(method === 'POST' && status === 'going' && emailChange === undefined && plusOnes
+            ? { plusOnes: plus }
+            : {}),
           ...emailBody,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
         error?: string;
         email_updates?: { state: string };
+        spots_left?: number | null;
+        max_plus_ones?: number | null;
       };
       if (!res.ok) {
         if (body.error === 'consent_required') setEmailError(strings.consentRequired);
         else if (body.error === 'invalid_email') setEmailError(strings.invalidEmail);
+        else if (body.error === 'capacity_exceeded')
+          setError(
+            body.spots_left === 1
+              ? strings.capacityExceededOne
+              : strings.capacityExceeded.replace('{{count}}', String(body.spots_left ?? 0)),
+          );
+        else if (body.error === 'too_many_plus_ones')
+          setError(strings.tooManyPlusOnes.replace('{{max}}', String(body.max_plus_ones ?? plusOnes?.max ?? 0)));
+        else if (body.error === 'plus_ones_not_allowed') setError(strings.plusOnesNotAllowed);
+        else if (body.error === 'invalid_status') setError(strings.invalidStatus);
         else
           setError(
             body.error === 'rate_limited'
@@ -236,9 +326,14 @@ export function RsvpForm({
   return (
     <>
       <section className="card" aria-label="RSVP">
+        {current?.promoted && current.status === 'going' ? (
+          <p className="badge" style={{ margin: 0, fontSize: 16 }} role="status" data-testid="got-a-spot">
+            {strings.gotASpot}
+          </p>
+        ) : null}
         {current ? (
           <p style={{ margin: 0 }} data-testid="my-answer">
-            {strings.yourAnswer.replace('{{status}}', strings[current.status])}
+            {answerText(current, strings)}
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -255,17 +350,21 @@ export function RsvpForm({
           </div>
         )}
         {emailUpdates && !current ? emailFields : null}
+        {plusOnes ? (
+          <PlusOnes value={plus} max={plusOnes.max} disabled={disabled} onChange={setPlus} strings={strings} />
+        ) : null}
         <div className="choices">
           {STATUSES.map((s) => (
             <button
               key={s}
               type="button"
               className="btn"
-              aria-pressed={current?.status === s}
+              data-testid={`answer-${s}`}
+              aria-pressed={s === 'going' ? wantsToGo : current?.status === s}
               disabled={disabled}
               onClick={() => send('POST', s)}
             >
-              {strings[s]}
+              {s === 'going' && full && current?.status !== 'going' ? strings.fullJoinWaitlist : strings[s]}
             </button>
           ))}
         </div>
@@ -287,7 +386,7 @@ export function RsvpForm({
                 type="button"
                 className="link-btn"
                 disabled={disabled}
-                onClick={() => send('POST', current.status, null)}
+                onClick={() => send('POST', currentAnswer, null)}
               >
                 {strings.emailTurnOff}
               </button>
@@ -299,7 +398,7 @@ export function RsvpForm({
                 type="button"
                 className="btn"
                 disabled={disabled}
-                onClick={() => send('POST', current.status, 'form')}
+                onClick={() => send('POST', currentAnswer, 'form')}
               >
                 {strings.emailSave}
               </button>

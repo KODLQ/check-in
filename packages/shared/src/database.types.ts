@@ -123,14 +123,14 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "cancelled_at": string | null,"cover_path": string | null,"created_at": string,"description": string | null,"ends_at": string | null,"guest_list_visible": boolean,"host_id": string,"id": string,"latitude": number | null,"location_point": unknown,"location_text": string,"longitude": number | null,"place_name": string | null,"starts_at": string,"theme": string,"time_changed_at": string | null,"time_zone": string,"title": string,"updated_at": string,"event_ended_at": string | null
+                    "allow_plus_ones": boolean,"cancelled_at": string | null,"capacity": number | null,"cover_path": string | null,"created_at": string,"description": string | null,"ends_at": string | null,"guest_list_visible": boolean,"host_id": string,"id": string,"latitude": number | null,"location_point": unknown,"location_text": string,"longitude": number | null,"max_plus_ones": number,"place_name": string | null,"starts_at": string,"theme": string,"time_changed_at": string | null,"time_zone": string,"title": string,"updated_at": string,"event_ended_at": string | null
                   }
                   ComputedFields: "event_ended_at"
                   Insert: {
-                    "cancelled_at"?: string | null,"cover_path"?: string | null,"created_at"?: string,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text": string,"longitude"?: number | null,"place_name"?: string | null,"starts_at": string,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title": string,"updated_at"?: string
+                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text": string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"starts_at": string,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title": string,"updated_at"?: string
                   }
                   Update: {
-                    "cancelled_at"?: string | null,"cover_path"?: string | null,"created_at"?: string,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text"?: string,"longitude"?: number | null,"place_name"?: string | null,"starts_at"?: string,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title"?: string,"updated_at"?: string
+                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text"?: string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"starts_at"?: string,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -323,14 +323,14 @@ isOneToOne: true
                   ]
                 },"rsvps": {
                   Row: {
-                    "created_at": string,"display_name": string,"event_id": string,"guest_token_hash": string | null,"id": string,"status": Database["public"]['Enums']["rsvp_status"],"updated_at": string,"user_id": string | null
+                    "created_at": string,"display_name": string,"event_id": string,"guest_token_hash": string | null,"id": string,"plus_ones": number,"promoted_at": string | null,"status": Database["public"]['Enums']["rsvp_status"],"updated_at": string,"user_id": string | null,"waitlisted_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"display_name": string,"event_id": string,"guest_token_hash"?: string | null,"id"?: string,"status": Database["public"]['Enums']["rsvp_status"],"updated_at"?: string,"user_id"?: string | null
+                    "created_at"?: string,"display_name": string,"event_id": string,"guest_token_hash"?: string | null,"id"?: string,"plus_ones"?: number,"promoted_at"?: string | null,"status": Database["public"]['Enums']["rsvp_status"],"updated_at"?: string,"user_id"?: string | null,"waitlisted_at"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"display_name"?: string,"event_id"?: string,"guest_token_hash"?: string | null,"id"?: string,"status"?: Database["public"]['Enums']["rsvp_status"],"updated_at"?: string,"user_id"?: string | null
+                    "created_at"?: string,"display_name"?: string,"event_id"?: string,"guest_token_hash"?: string | null,"id"?: string,"plus_ones"?: number,"promoted_at"?: string | null,"status"?: Database["public"]['Enums']["rsvp_status"],"updated_at"?: string,"user_id"?: string | null,"waitlisted_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -403,6 +403,12 @@ isOneToOne: false
 "event_ended_at":
 { Args: { "e": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']> }; Returns: string
                            },
+"event_going_heads":
+{ Args: { "p_event_id": string }; Returns: number
+                           },
+"event_spots_left":
+{ Args: { "p_event_id": string }; Returns: number
+                           },
 "fan_out_due_notifications":
 { Args: { "p_limit"?: number,"p_now"?: string }; Returns: number
                            },
@@ -465,6 +471,68 @@ isOneToOne: false
 "list_my_invites":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"lock_event":
+{ Args: { "p_event_id": string }; Returns: {
+              "allow_plus_ones": boolean,
+"cancelled_at": string | null,
+"capacity": number | null,
+"cover_path": string | null,
+"created_at": string,
+"description": string | null,
+"ends_at": string | null,
+"guest_list_visible": boolean,
+"host_id": string,
+"id": string,
+"latitude": number | null,
+"location_point": unknown,
+"location_text": string,
+"longitude": number | null,
+"max_plus_ones": number,
+"place_name": string | null,
+"starts_at": string,
+"theme": string,
+"time_changed_at": string | null,
+"time_zone": string,
+"title": string,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "events"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"lock_open_event":
+{ Args: { "p_event_id": string }; Returns: {
+              "allow_plus_ones": boolean,
+"cancelled_at": string | null,
+"capacity": number | null,
+"cover_path": string | null,
+"created_at": string,
+"description": string | null,
+"ends_at": string | null,
+"guest_list_visible": boolean,
+"host_id": string,
+"id": string,
+"latitude": number | null,
+"location_point": unknown,
+"location_text": string,
+"longitude": number | null,
+"max_plus_ones": number,
+"place_name": string | null,
+"starts_at": string,
+"theme": string,
+"time_changed_at": string | null,
+"time_zone": string,
+"title": string,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "events"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "mask_email":
 { Args: { "p_email": string }; Returns: string
                            },
@@ -509,7 +577,9 @@ isOneToOne: false
       } },
 "open_event_for_token":
 { Args: { "p_token": string }; Returns: {
-              "cancelled_at": string | null,
+              "allow_plus_ones": boolean,
+"cancelled_at": string | null,
+"capacity": number | null,
 "cover_path": string | null,
 "created_at": string,
 "description": string | null,
@@ -521,6 +591,7 @@ isOneToOne: false
 "location_point": unknown,
 "location_text": string,
 "longitude": number | null,
+"max_plus_ones": number,
 "place_name": string | null,
 "starts_at": string,
 "theme": string,
@@ -538,6 +609,12 @@ isOneToOne: false
 "post_announcement":
 { Args: { "p_body": string,"p_event_id": string }; Returns: Json
                            },
+"promote_from_waitlist":
+{ Args: { "p_event_id": string }; Returns: string[]
+                           },
+"promote_waitlisted":
+{ Args: { "p_over_capacity"?: boolean,"p_rsvp_id": string }; Returns: Json
+                           },
 "random_url_token":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
@@ -553,20 +630,46 @@ isOneToOne: false
 "remove_co_host":
 { Args: { "p_event_id": string,"p_user_id": string }; Returns: boolean
                            },
+"remove_rsvp":
+{ Args: { "p_rsvp_id": string }; Returns: boolean
+                           },
 "revoke_co_host_invite":
 { Args: { "p_token": string }; Returns: undefined
                            },
 "rsvp_as_user":
-{ Args: { "p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
+{ Args: { "p_plus_ones"?: number,"p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
+                           },
+"rsvp_result":
+{ Args: { "p_rsvp_id": string }; Returns: Json
                            },
 "run_retention":
 { Args: { "p_now"?: string }; Returns: undefined
                            },
+"save_rsvp_locked":
+{ Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"p_display_name": string,"p_existing_only"?: boolean,"p_guest_hash": string,"p_plus_ones": number,"p_rename": boolean,"p_status": Database["public"]['Enums']["rsvp_status"],"p_user_id": string }; Returns: {
+              "created_at": string,
+"display_name": string,
+"event_id": string,
+"guest_token_hash": string | null,
+"id": string,
+"plus_ones": number,
+"promoted_at": string | null,
+"status": Database["public"]['Enums']["rsvp_status"],
+"updated_at": string,
+"user_id": string | null,
+"waitlisted_at": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "rsvps"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "schedule_event_reminder":
 { Args: { "p_event": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"p_now"?: string }; Returns: string
                            },
 "set_my_rsvp":
-{ Args: { "p_event_id": string,"p_status": Database["public"]['Enums']["rsvp_status"] }; Returns: Json
+{ Args: { "p_event_id": string,"p_plus_ones"?: number,"p_status": Database["public"]['Enums']["rsvp_status"] }; Returns: Json
                            },
 "try_uuid":
 { Args: { "p_text": string }; Returns: string
@@ -578,14 +681,17 @@ isOneToOne: false
 { Args: { "p_token": string }; Returns: undefined
                            },
 "upsert_rsvp":
-{ Args: { "p_display_name": string,"p_email"?: string,"p_email_action"?: string,"p_email_hash"?: string,"p_guest_token": string,"p_locale"?: string,"p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
+{ Args: { "p_display_name": string,"p_email"?: string,"p_email_action"?: string,"p_email_hash"?: string,"p_guest_token": string,"p_locale"?: string,"p_plus_ones"?: number,"p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
+                           },
+"waitlist_position":
+{ Args: { "p_rsvp_id": string }; Returns: number
                            },
 "withdraw_rsvp":
 { Args: { "p_guest_token": string,"p_token": string }; Returns: boolean
                            }
           }
           Enums: {
-            "rsvp_status": "going"|"maybe"|"declined"
+            "rsvp_status": "going"|"maybe"|"declined"|"waitlisted"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -705,7 +811,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "rsvp_status": ["going", "maybe", "declined"]
+            "rsvp_status": ["going", "maybe", "declined", "waitlisted"]
           }
         }
 } as const

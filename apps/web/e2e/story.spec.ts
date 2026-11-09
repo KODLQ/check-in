@@ -29,14 +29,17 @@ const fullInvite: ShownInvite = {
     theme: 'night',
     time_changed_at: null,
     guest_list_visible: true,
+    allow_plus_ones: true,
+    max_plus_ones: 2,
+    capacity: 80,
   },
   host: { display_name: 'Alva', avatar_path: 'host/avatar.jpg' },
-  counts: { going: 73, maybe: 58 },
+  counts: { going: 73, maybe: 58, waitlist: 4, spots_left: 7, full: false },
   guests: [
-    { display_name: 'Zlatan Gästsson', status: 'going' },
-    { display_name: 'Maja Maybe', status: 'maybe' },
+    { display_name: 'Zlatan Gästsson', status: 'going', plus_ones: 2 },
+    { display_name: 'Maja Maybe', status: 'maybe', plus_ones: 0 },
   ],
-  my_rsvp: { status: 'going', display_name: 'Me Myself' },
+  my_rsvp: { status: 'going', display_name: 'Me Myself', plus_ones: 1, waitlist_position: null, promoted: false },
   announcements: [{ id: 'a1', body: 'Moved to the backyard', created_at: '2026-12-01T10:00:00Z' }],
 };
 const urls = { siteUrl: 'https://checkin.example', coverUrl: (p: string | null) => (p ? `https://cdn.example/${p}` : null) };

@@ -10,17 +10,15 @@ import {
   type AnnouncementItem,
 } from '@/components/announcements';
 import { Cover } from '@/components/cover';
+import { answerLine, CountsLine, RsvpControls, rsvpErrorText, type RsvpInvite } from '@/components/rsvp-controls';
 import { Body, Button, ErrorText, Screen, Title, useColors } from '@/components/ui';
-import { errorKey } from '@/lib/events';
 import { locale } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
-const STATUSES: RsvpStatus[] = ['going', 'maybe', 'declined'];
-
-interface MyInviteDetail {
+interface MyInviteDetail extends RsvpInvite {
   state: 'not_found' | 'cancelled' | 'past' | 'active';
-  event?: {
+  event?: RsvpInvite['event'] & {
     title: string;
     description?: string | null;
     starts_at: string;
@@ -32,9 +30,7 @@ interface MyInviteDetail {
   };
   host?: { display_name: string | null };
   co_hosts?: { display_name: string | null }[];
-  counts?: { going: number; maybe: number };
-  guests?: { display_name: string; status: RsvpStatus }[] | null;
-  my_rsvp?: { status: RsvpStatus; display_name: string } | null;
+  guests?: { display_name: string; status: RsvpStatus; plus_ones?: number }[] | null;
   announcements?: AnnouncementItem[];
 }
 
@@ -78,15 +74,16 @@ export default function MyInviteScreen() {
   const e = invite.event;
   const open = invite.state === 'active';
 
-  async function respond(status: RsvpStatus) {
+  async function respond(status: RsvpStatus, plusOnes?: number) {
     setError(null);
     setBusy(true);
     const { error: rpcError } = await supabase.rpc('set_my_rsvp', {
       p_event_id: eventId,
       p_status: status,
+      p_plus_ones: plusOnes,
     });
     setBusy(false);
-    if (rpcError) setError(t(`errors.${errorKey(rpcError)}`, t('common.error')));
+    if (rpcError) setError(rsvpErrorText(t, rpcError, e.max_plus_ones));
     await load();
   }
 
@@ -98,13 +95,18 @@ export default function MyInviteScreen() {
         style: 'destructive',
         onPress: async () => {
           setError(null);
-          // RLS lets a user delete their own response (user_id = auth.uid()).
-          const { error: delError } = await supabase
+          // Withdrawing goes through remove_rsvp (not a table DELETE) so a freed spot is passed on to
+          // the waitlist (spec: my-invites "Withdraw frees a spot").
+          const { data: own } = await supabase
             .from('rsvps')
-            .delete()
+            .select('id')
             .eq('event_id', eventId)
-            .eq('user_id', session?.user.id ?? '');
-          if (delError) setError(t('common.error'));
+            .eq('user_id', session?.user.id ?? '')
+            .maybeSingle();
+          const { data: removed, error: delError } = own
+            ? await supabase.rpc('remove_rsvp', { p_rsvp_id: own.id })
+            : { data: false, error: null };
+          if (delError || !removed) setError(t('common.error'));
           else router.back();
         },
       },
@@ -140,44 +142,25 @@ export default function MyInviteScreen() {
         </AnnouncementsCard>
       ) : null}
 
-      {invite.my_rsvp ? (
-        <Text testID="my-answer" style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>
-          {t('rsvp.your_answer', { status: t(`rsvp.${invite.my_rsvp.status}`) })}
-        </Text>
-      ) : null}
-
       {open ? (
         <>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {STATUSES.map((s) => (
-              <View key={s} style={{ flex: 1 }}>
-                <Button
-                  testID={`answer-${s}`}
-                  variant={invite.my_rsvp?.status === s ? 'primary' : 'secondary'}
-                  title={t(`rsvp.${s}`)}
-                  disabled={busy}
-                  onPress={() => respond(s)}
-                />
-              </View>
-            ))}
-          </View>
+          <RsvpControls invite={invite} busy={busy} onRespond={(s, n) => void respond(s, n)} />
           <Button testID="withdraw" variant="ghost" title={t('rsvp.remove')} onPress={withdraw} />
         </>
+      ) : invite.my_rsvp ? (
+        <Text testID="my-answer" style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>
+          {answerLine(t, invite.my_rsvp)}
+        </Text>
       ) : null}
       <ErrorText>{error}</ErrorText>
 
-      {invite.counts ? (
-        <Text style={{ color: c.muted }}>
-          {invite.counts.going === 1
-            ? t('rsvp.people_going_one')
-            : t('rsvp.people_going', { count: invite.counts.going })}
-        </Text>
-      ) : null}
+      <CountsLine counts={invite.counts} />
       {invite.guests?.length ? (
         <View testID="guest-list" style={{ gap: 4 }}>
           {invite.guests.map((g, i) => (
             <Body key={i}>
               {g.display_name}
+              {g.status === 'going' && (g.plus_ones ?? 0) > 0 ? ` +${g.plus_ones}` : ''}
               {g.status === 'maybe' ? ` · ${t('rsvp.maybe')}` : ''}
             </Body>
           ))}

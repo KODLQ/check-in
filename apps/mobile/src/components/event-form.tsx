@@ -1,4 +1,4 @@
-import { EVENT_THEMES, fieldErrors, makeEventInputSchema, type EventInput } from '@check-in/shared';
+import { EVENT_THEMES, fieldErrors, makeEventInputSchema, MAX_PLUS_ONES, type EventInput } from '@check-in/shared';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
@@ -6,7 +6,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, Vi
 import { Cover } from './cover';
 import { DateField } from './date-field';
 import { LocationField, type LocationValue } from './location-field';
-import { Button, ErrorText, Field, Label, useColors } from './ui';
+import { Body, Button, ErrorText, Field, Label, Stepper, useColors } from './ui';
 
 export interface EventFormValues extends EventInput {
   coverPath?: string | null;
@@ -50,17 +50,25 @@ export function EventForm({
   const [theme, setTheme] = useState(initial?.theme ?? 'sunset');
   const [coverPath, setCoverPath] = useState<string | null>(initial?.coverPath ?? null);
   const [guestListVisible, setGuestListVisible] = useState(initial?.guestListVisible ?? true);
+  // Guests (add-guest-capacity): optional, collapsed so creating an event stays a 30-second job.
+  const [allowPlusOnes, setAllowPlusOnes] = useState(initial?.allowPlusOnes ?? false);
+  const [maxPlusOnes, setMaxPlusOnes] = useState(initial?.maxPlusOnes ?? 1);
+  const [capacityText, setCapacityText] = useState(initial?.capacity != null ? String(initial.capacity) : '');
+  const [guestsOpen, setGuestsOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   const err = (k: string) => (errors[k] ? t(`errors.${errors[k]}`) : null);
 
   async function submit() {
-    const raw = { title, startsAt, endsAt, ...location, description, theme };
+    const trimmedCapacity = capacityText.trim();
+    const capacity = trimmedCapacity === '' ? null : /^\d+$/.test(trimmedCapacity) ? Number(trimmedCapacity) : NaN;
+    const raw = { title, startsAt, endsAt, ...location, description, theme, allowPlusOnes, maxPlusOnes, capacity };
     const parsed = makeEventInputSchema(now).safeParse(raw);
     const fe = fieldErrors(parsed);
     if (fe || !parsed.success) {
       setErrors(fe ?? {});
+      if (fe?.capacity || fe?.maxPlusOnes) setGuestsOpen(true);
       return;
     }
     setErrors({});
@@ -156,6 +164,63 @@ export function EventForm({
             <Label>{t('events.show_guest_list')}</Label>
           </View>
           <Switch value={guestListVisible} onValueChange={setGuestListVisible} />
+        </View>
+
+        <View style={{ gap: 14 }}>
+          <Pressable
+            testID="guests-toggle"
+            accessibilityRole="button"
+            accessibilityState={{ expanded: guestsOpen }}
+            onPress={() => setGuestsOpen((o) => !o)}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+          >
+            <View style={{ flex: 1, gap: 2 }}>
+              <Label>{t('events.guests_section')}</Label>
+              <Text testID="guests-summary" style={{ color: c.muted, fontSize: 15 }}>
+                {t('events.guests_summary', {
+                  plus: allowPlusOnes ? t('events.plus_ones_up_to', { count: maxPlusOnes }) : t('events.plus_ones_off'),
+                  limit: capacityText.trim() ? t('events.limit_of', { count: capacityText.trim() }) : t('events.no_limit'),
+                })}
+              </Text>
+            </View>
+            <Text style={{ color: c.muted, fontSize: 18 }}>{guestsOpen ? '⌃' : '⌄'}</Text>
+          </Pressable>
+          {guestsOpen ? (
+            <View style={{ gap: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <Body>{t('events.allow_plus_ones')}</Body>
+                </View>
+                <Switch testID="allow-plus-ones" value={allowPlusOnes} onValueChange={setAllowPlusOnes} />
+              </View>
+              {allowPlusOnes ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Body>{t('events.max_plus_ones')}</Body>
+                  <Stepper
+                    testID="max-plus-ones"
+                    value={maxPlusOnes}
+                    min={1}
+                    max={MAX_PLUS_ONES}
+                    onChange={setMaxPlusOnes}
+                    decreaseLabel={t('rsvp.plus_ones_decrease')}
+                    increaseLabel={t('rsvp.plus_ones_increase')}
+                  />
+                </View>
+              ) : null}
+              <ErrorText testID="max-plus-ones-error">{err('maxPlusOnes')}</ErrorText>
+              <Field
+                testID="capacity"
+                label={`${t('events.capacity')} (${t('common.optional')})`}
+                value={capacityText}
+                onChangeText={setCapacityText}
+                placeholder={t('events.capacity_placeholder')}
+                keyboardType="number-pad"
+                maxLength={4}
+                error={err('capacity')}
+              />
+              <Text style={{ color: c.muted, fontSize: 13 }}>{t('events.capacity_hint')}</Text>
+            </View>
+          ) : null}
         </View>
 
         <ErrorText testID="form-error">{errors._ ? t(`errors.${errors._}`, t('common.error')) : null}</ErrorText>

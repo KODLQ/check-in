@@ -76,3 +76,9 @@ label { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: 
 .share-fallback { display: flex; flex-direction: column; gap: 8px; }
 .share-fallback a.btn { display: flex; align-items: center; justify-content: center; text-decoration: none; }
 .share-fallback input { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); }
+
+/* Plus-one stepper (add-guest-capacity) */
+.stepper { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.stepper-controls { display: inline-flex; align-items: center; gap: 12px; }
+.stepper-controls .btn { width: 44px; padding-left: 0; padding-right: 0; }
+.stepper-controls output { min-width: 1.5ch; text-align: center; font-weight: 700; font-size: 18px; }

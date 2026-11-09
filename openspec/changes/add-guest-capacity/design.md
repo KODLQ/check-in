@@ -62,7 +62,8 @@ and only then reads and writes `rsvps`. Writers on the same event are serialized
 Lock order is always **events → rsvps**:
 - RPCs (`upsert_rsvp`, `rsvp_as_user`, `withdraw_rsvp`, `remove_rsvp`, `promote_waitlisted`) lock the event first.
 - A host `UPDATE events ...` locks the event row itself. An `AFTER UPDATE OF capacity, allow_plus_ones, max_plus_ones` trigger then runs promotion while holding that lock.
-- Therefore **direct `DELETE` on `rsvps` is removed** (it would lock rsvps → events and can deadlock). The `"rsvps: host or self can delete"` policy is dropped and replaced by the `remove_rsvp` RPC.
+- Therefore **direct `DELETE` on `rsvps` is removed** (it would lock rsvps → events and can deadlock). The `"rsvps: manager or self can delete"` policy (the add-co-hosts name) is dropped and replaced by the `remove_rsvp` RPC.
+- Promotion itself runs from row triggers (see §11) that call `lock_event` first; when the caller already holds the event lock this is a no-op re-lock, so the order stays events → rsvps.
 
 Alternatives considered:
 - *SERIALIZABLE transactions:* correct, but supabase-js RPCs can't set isolation per call, and serialization failures would need retry logic in the route handler and the app.
@@ -81,18 +82,19 @@ Internal (no grants to `anon`/`authenticated`; called only by the RPCs/trigger):
   3. Going requested:
      - currently Going: if the new size fits `remaining`, or is ≤ the current size → stay Going. Otherwise raise `capacity_exceeded` with the spots left (spec: keep current answer).
      - not currently Going: if the size fits `remaining` → Going; else → `waitlisted`, keeping the existing `waitlisted_at` if already waitlisted, else `now()`.
-  4. Upsert the row, clear `promoted_at`, then call `promote_from_waitlist(ev)`.
+  4. Upsert the row and clear `promoted_at` if the answer changed. Promotion is not called here: the `rsvps` triggers in §11 run it when the write freed spots.
 - `promote_from_waitlist(ev) returns setof uuid`: returns immediately if the event is cancelled or ended. Otherwise it walks `status = 'waitlisted'` ordered by `(waitlisted_at, id)` and promotes each row whose `1 + plus_ones ≤ remaining` (sets `going`, clears `waitlisted_at`, sets `promoted_at = now()`, decrements `remaining`). Rows that don't fit are skipped, never reordered. Bounded by the 500-row cap.
 
 Public RPCs (all replaced with `create or replace`, each adds a defaulted parameter so existing named-argument callers keep working):
 
 | Function | Caller / grant | Change |
 |---|---|---|
-| `upsert_rsvp(p_token, p_guest_token, p_display_name, p_status, p_plus_ones int default 0)` | service_role | lock event, `save_rsvp_locked`; returns `{status, display_name, plus_ones, waitlist_position, spots_left}`. Old 4-arg signature dropped. |
-| `rsvp_as_user(p_token, p_status, p_plus_ones int default 0)` | authenticated | same |
+| `upsert_rsvp(p_token, p_guest_token, p_display_name, p_status, p_email, p_email_hash, p_email_action, p_locale, p_plus_ones int default null)` | service_role | lock event, `save_rsvp_locked`; returns `{status, display_name, plus_ones, waitlist_position, spots_left, email_updates}`. The 8-arg (add-guest-updates) signature is dropped; every existing positional/named call still resolves. |
+| `rsvp_as_user(p_token, p_status, p_plus_ones int default null)` | authenticated | same |
+| `set_my_rsvp(p_event_id, p_status, p_plus_ones int default null)` (add-my-invites) | authenticated | same, existing answer only |
 | `withdraw_rsvp(p_token, p_guest_token)` | service_role | lock event, delete, promote |
-| `remove_rsvp(p_rsvp_id)` **new** | authenticated | allowed if `is_event_host(event_id)` or `user_id = auth.uid()`; lock event, delete, promote |
-| `promote_waitlisted(p_rsvp_id, p_over_capacity boolean default false)` **new** | authenticated | host only (`is_event_host`), event must be active, row must be waitlisted. If it doesn't fit and `p_over_capacity` is false, raise `over_capacity` so the app can ask for confirmation and retry with `true`. |
+| `remove_rsvp(p_rsvp_id)` **new** | authenticated | allowed if `is_event_manager(event_id)` (owner or co-host) or `user_id = auth.uid()`; lock event, delete (trigger promotes); returns false otherwise |
+| `promote_waitlisted(p_rsvp_id, p_over_capacity boolean default false)` **new** | authenticated | managers only (`is_event_manager`; others get `not_found`), event must be active, row must be waitlisted (`not_waitlisted`). If it doesn't fit and `p_over_capacity` is false, raise `over_capacity` so the app can ask for confirmation and retry with `true`. |
 | `get_invite(p_token, p_guest_token)` | anon, authenticated | see below |
 
 Error codes are `P0001` with message keys matching the existing pattern; `/api/rsvp` `mapError` maps `capacity_exceeded` → 409 (with `spots_left`), `too_many_plus_ones`/`plus_ones_not_allowed`/`invalid_status` → 400.
@@ -105,14 +107,14 @@ Error codes are `P0001` with message keys matching the existing pattern; `/api/r
 
 ### 5. Event settings and the edit trigger
 
-Hosts keep writing `events` directly through the existing RLS policies. Validation is layered: `makeEventInputSchema` (Zod) for UX, DB check constraints for enforcement. A new `events_capacity_changed` `AFTER UPDATE` trigger (`when` capacity or plus-one settings are distinct) calls `promote_from_waitlist(new)`. Turning plus-ones off or lowering the max does **not** touch existing rows (spec); the rule is only applied by `save_rsvp_locked` on the next answer.
+Hosts and co-hosts keep writing `events` directly through the existing RLS policies. Validation is layered: `makeEventInputSchema` (Zod) for UX, DB check constraints for enforcement. A new `events_promote_on_capacity` `AFTER UPDATE OF capacity` trigger (`when` capacity is distinct) calls `promote_from_waitlist(new.id)`. Plus-one settings never free a spot, so they don't fire it. Turning plus-ones off or lowering the max does **not** touch existing rows (spec); the rule is only applied by `save_rsvp_locked` on the next answer.
 
 To keep event creation under 30 seconds, the settings sit in a collapsed "Guests" section of `event-form.tsx` (plus-ones switch + 1–5 stepper, optional capacity number field). No new required field.
 
 ### 6. Account deletion and the safety sweep
 
-Deleting a user cascades to their own `rsvps` rows without going through `remove_rsvp`, so it would free spots without promotion. Two measures:
-- The `delete-account` Edge Function first calls a new internal `withdraw_all_rsvps_for_user(uid)`. It locks the affected events in `id` order (deterministic, so no deadlock between two deleting users), deletes, and promotes.
+Deleting a user cascades to their own `rsvps` rows without going through `remove_rsvp`. Two measures:
+- A `BEFORE DELETE` trigger on `profiles` (`profiles_lock_rsvp_events`) locks every event the user answered, in `id` order (deterministic, so no deadlock between two deleting users or with RPCs), before the cascade deletes their rows; the `rsvps` delete trigger then promotes under locks already held. This covers the `delete-account` Edge Function and any other way an `auth.users` row is deleted, so the function needed no change (deviation from the earlier `withdraw_all_rsvps_for_user` plan, see §11).
 - `run_retention()` (already hourly via pg_cron) also calls `promote_from_waitlist` for active events with a non-empty waitlist. This catches any path that bypassed the RPCs (e.g. manual SQL). It is a safety net only; the specs are met without it.
 
 ### 7. Clients
@@ -124,23 +126,35 @@ Deleting a user cascades to their own `rsvps` rows without going through `remove
 
 ### 8. Notifications hook (soft dependency on `add-guest-updates`)
 
-Promotion is observable as an `rsvps` UPDATE from `status = 'waitlisted'` to `'going'` with `promoted_at` set. `promote_from_waitlist` returns the promoted ids. When the `notifications` capability lands, a single `AFTER UPDATE` trigger on `rsvps` (`when old.status = 'waitlisted' and new.status = 'going'`) enqueues a "you got a spot" notification through its API. If `notifications` is not merged when this change ships, that task is deferred. The invite page banner and host list already satisfy the spec without it.
+Promotion is observable as an `rsvps` UPDATE from `status = 'waitlisted'` to `'going'` with `promoted_at` set. `promote_from_waitlist` returns the promoted ids. `notifications` (add-guest-updates) has landed, so this change adds the `waitlist_promoted` kind (push + email, not urgent, stale after start; shared `NOTIFICATION_KINDS`, sv/en templates) and an `AFTER UPDATE OF status` trigger `rsvps_notify_promoted` (`when old.status = 'waitlisted' and new.status = 'going' and new.promoted_at is not null`) that enqueues it for audience `rsvp` (push to the app user's devices, email to an opted-in web guest), deduplicated per promotion. A guest admitted by their own answer never has `promoted_at` set, so gets nothing. Claim merges (which copy an old promotion) are skipped. `notification_stale_reason` returns `no_longer_going` when the guest is no longer Going at send time. The host reply digest (`rsvps_notify_digest`) ignores promotions; joining the waitlist still counts as a reply.
 
 ### 9. RLS summary
 
 No new tables.
 - `events`: existing host-only select/insert/update/delete policies cover the new columns. Still no anon policy.
-- `rsvps`: select policy unchanged (host sees all incl. waitlist; signed-in guest sees own row). **Dropped:** `"rsvps: host or self can delete"`. No insert/update/delete policies remain; all writes go through the security-definer functions above, each checking invite token, host (`is_event_host`) or self (`auth.uid()`).
+- `rsvps`: select policy unchanged (managers see all incl. waitlist; signed-in guest sees own row). **Dropped:** `"rsvps: manager or self can delete"`. No insert/update/delete policies remain; all writes go through the security-definer functions above, each checking invite token, manager (`is_event_manager`) or self (`auth.uid()`).
 - Realtime on `rsvps` is unchanged and still filtered by RLS, so promotions reach only the host.
-- Internal helpers (`save_rsvp_locked`, `promote_from_waitlist`, `event_going_heads`, `withdraw_all_rsvps_for_user`) have `execute` revoked from `public, anon, authenticated`.
+- Internal helpers (`save_rsvp_locked`, `promote_from_waitlist`, `event_going_heads`, `event_spots_left`, `waitlist_position`, `rsvp_result`, `lock_event`, `lock_open_event` and the trigger functions) have `execute` revoked from `public, anon, authenticated`.
 
 ### 10. Testing
 
-- **pgTAP (`supabase/tests/08_capacity.test.sql`, `09_waitlist.test.sql`):** constraints, admission/waitlist/promotion rules, skip-ahead, capacity lowering/raising/clearing, plus-one validation, host promote/remove and non-host rejection, dropped delete policy, grants, `get_invite` payload.
-- **Concurrency (Vitest, `supabase/tests/concurrency/capacity.test.ts` against local Supabase):** fire 50 parallel `upsert_rsvp` calls at an event with 10 spots and assert Going heads = 10 and 40 waitlisted. Also run parallel withdraw + new-answer races. pgTAP can't open concurrent sessions, so this needs a real client.
+- **pgTAP (`supabase/tests/18_capacity.test.sql`, `19_waitlist.test.sql`, shared fixture `fixtures/capacity.psql`; 08/09 were taken by add-guest-updates):** constraints, admission/waitlist/promotion rules, skip-ahead, capacity lowering/raising/clearing, plus-one validation, host promote/remove and non-host rejection, dropped delete policy, grants, `get_invite` payload.
+- **Concurrency (Vitest, `supabase/tests/concurrency/capacity.test.ts` against local Supabase, `npm run test:concurrency`):** opens up to 55 direct connections (postgres.js), each a transaction as `service_role`/`authenticated` like PostgREST, released together by a barrier. 50 parallel `upsert_rsvp` Going calls at a 10-spot event give exactly 10 Going heads and 40 waitlisted with gapless positions; plus-one storms, last-spot races, withdraw + new-answer races, host `remove_rsvp` races and capacity edits keep the invariant (heads ≤ capacity, no waiting guest fits) with no deadlock or serialization errors. pgTAP can't open concurrent sessions, so this needs a real client.
 - **Vitest (shared):** schemas, `headCount`.
 - **Playwright (web):** plus-ones, full → waitlist → promotion after another guest withdraws.
 - **Jest + RNTL (mobile):** event-form settings validation, guest list grouping/"+N". Manual iOS Simulator pass for promote/remove.
+
+### 11. Implementation notes and deviations (applied after add-guest-updates, add-my-invites, add-co-hosts)
+
+- **One promotion mechanism: row triggers.** Instead of each RPC calling `promote_from_waitlist`, `AFTER` triggers do it: `rsvps_promote_on_delete` (a Going row is deleted) and `rsvps_promote_on_update` (a Going row leaves Going or lowers its plus-ones) on `rsvps`, and `events_promote_on_capacity` on `events`. Every path that frees a spot therefore promotes without having to remember to: web withdraw (`withdraw_rsvp`), app withdraw (`remove_rsvp` from My invites), manager removal (`remove_rsvp`), status or plus-one changes (`upsert_rsvp`, `rsvp_as_user`, `set_my_rsvp`), claim merges (`claim_guest_rsvps`), the account-deletion cascade, capacity edits and manual SQL. `promote_from_waitlist` takes the event lock itself (a no-op when the caller holds it) and does nothing on cancelled/ended/deleted events. Every RPC still locks the event before touching `rsvps`, so the lock order stays events → rsvps; the hourly `run_retention` sweep remains a safety net (all earlier `run_retention` lines kept).
+- **Account deletion:** a `profiles` `BEFORE DELETE` lock trigger (§6) replaces `withdraw_all_rsvps_for_user`; `delete-account` is unchanged and was verified with `supabase functions serve` (deleting a Going user promoted the waitlisted guest and enqueued one `waitlist_promoted`).
+- **`p_plus_ones` defaults to `null` = keep** (not 0) in `upsert_rsvp`, `rsvp_as_user` and `set_my_rsvp`, and `rsvpInputSchema.plusOnes` is optional: an email-only change, or an older client re-sending Going, must not wipe a guest's plus-ones. Maybe/Can't go always store 0. Re-sending an unchanged count is allowed after the host turned plus-ones off or lowered the maximum (spec: keep them until the answer changes).
+- **Co-hosts:** every host check uses `is_event_manager` (owner + co-hosts). A non-manager calling `promote_waitlisted` gets `not_found`, so it doesn't reveal whether the response exists.
+- **Sibling functions redefined with capacity rules:** `set_my_rsvp` and `list_my_invites` (plus-ones, Waitlist answer), `claim_guest_rsvps` (locks the claimed events in id order; a merge keeps the newest answer with its plus-ones and waitlist place, a waitlisted browser row never replaces a Going account row, the deleted row's spots are refilled by the trigger), `invite_payload` (shared by `get_invite`/`get_my_invite`), `rsvps_notify_digest`, `notification_stale_reason`, `run_retention`.
+- **Errors with numbers** (`capacity_exceeded` spots left, `too_many_plus_ones` maximum, `over_capacity` spots left) carry the number in the Postgres `DETAIL`; `/api/rsvp` returns it as `spots_left` / `max_plus_ones`, the app reads `error.details`.
+- `waitlisted_at` and `promoted_at` use `clock_timestamp()` taken under the lock, so queue order equals admission order even inside one transaction. The "You got a spot!" banner (`promoted`) stays until the guest's answer actually changes (re-sending the same answer keeps it).
+- Helper functions take ids, not row types, so PostgREST doesn't expose them as computed columns in the generated types.
+- Mobile: the in-app invite and My invites share one `RsvpControls` component (stepper, Full — join waitlist, position, banner); the host list is a `GuestList` component; Promote asks for confirmation on `over_capacity` and retries with `p_over_capacity = true`.
 
 ## Personal data & retention
 
@@ -160,7 +174,7 @@ No new categories of personal data. Plus-ones are deliberately anonymous to avoi
 - [Dropping the `rsvps` delete policy breaks remove-guest in any already-installed app build] → the app is pre-release. If a store build exists at deploy time, ship the mobile update first, or keep the policy for one release and rely on the hourly sweep.
 - [Waitlisted guests may never learn they were promoted if they don't revisit and `notifications` isn't available] → the banner shows on next visit, and the host can see and message them. Delivery is owned by `add-guest-updates`.
 - [Stale `get_invite` reads show "spots left" that are gone by the time the guest taps] → the write path decides authoritatively and the response tells the guest they were waitlisted.
-- [Concurrent edits to both RSVP functions while siblings (`add-co-hosts`, `add-guest-updates`) also touch `rsvps`/`is_event_host`] → keep the internal `save_rsvp_locked` the single write path so siblings extend one function. Co-host changes to `is_event_host` automatically apply to `remove_rsvp`/`promote_waitlisted`.
+- [Siblings (`add-date-polls`, `add-event-wall`) also write or read `rsvps`] → `save_rsvp_locked` (after `lock_open_event`) is the single write path for answers: anything that turns an answer into Going must call it so capacity and the waitlist apply, and must never write `status = 'going'` directly. Waitlisted guests are not attendees: they are excluded from the `event_attendees` notification audience and from guest lists, so features for attendees should check `status in ('going', 'maybe')`, not "has a response".
 
 ## Migration Plan
 

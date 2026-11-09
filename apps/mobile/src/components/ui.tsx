@@ -135,7 +135,63 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
   );
 }
 
+/** − value + stepper (plus-ones). Buttons are disabled at the bounds. */
+export function Stepper({
+  value,
+  min,
+  max,
+  onChange,
+  testID,
+  decreaseLabel,
+  increaseLabel,
+  disabled,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  onChange: (n: number) => void;
+  testID?: string;
+  decreaseLabel: string;
+  increaseLabel: string;
+  disabled?: boolean;
+}) {
+  const c = useColors();
+  const step = (label: string, glyph: string, next: number, off: boolean, id: string) => (
+    <Pressable
+      testID={testID ? `${testID}-${id}` : undefined}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: off }}
+      disabled={off}
+      onPress={() => onChange(next)}
+      style={({ pressed }) => [
+        styles.stepperButton,
+        { backgroundColor: c.surface, borderColor: c.border, opacity: off ? 0.4 : pressed ? 0.7 : 1 },
+      ]}
+    >
+      <Text style={{ fontSize: 22, fontWeight: '700', color: c.text }}>{glyph}</Text>
+    </Pressable>
+  );
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+      {step(decreaseLabel, '−', value - 1, !!disabled || value <= min, 'decrease')}
+      <Text testID={testID ? `${testID}-value` : undefined} style={{ fontSize: 18, fontWeight: '700', color: c.text, minWidth: 18, textAlign: 'center' }}>
+        {value}
+      </Text>
+      {step(increaseLabel, '+', value + 1, !!disabled || value >= max, 'increase')}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  stepperButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   button: {
     minHeight: 50,
     borderRadius: 14,

@@ -42,8 +42,8 @@ $$, '42501', null, 'anon cannot insert responses directly');
 -- Host removes a guest
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', true);
-delete from rsvps where display_name = 'Anon';
-select is((select count(*)::int from rsvps), 1, 'host can remove a guest');
+-- add-guest-capacity: removal goes through remove_rsvp (it promotes from the waitlist).
+select ok(remove_rsvp((select id from rsvps where display_name = 'Anon')), 'host can remove a guest');
 
 select * from finish();
 rollback;

@@ -3,21 +3,21 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView } from 'react-native';
 
 import { AnnouncementList, AnnouncementsCard, type AnnouncementItem } from '@/components/announcements';
 import { Cover } from '@/components/cover';
+import { CountsLine, RsvpControls, rsvpErrorText, type RsvpInvite } from '@/components/rsvp-controls';
 import { Body, Button, ErrorText, Screen, Title, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { INVITE_BASE_URL } from '@/lib/config';
-import { errorKey } from '@/lib/events';
 import { locale } from '@/lib/i18n';
 import { maybeAskForPush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 
-interface Invite {
+interface Invite extends RsvpInvite {
   state: 'not_found' | 'cancelled' | 'past' | 'active';
-  event?: {
+  event?: RsvpInvite['event'] & {
     title: string;
     description?: string | null;
     starts_at: string;
@@ -29,8 +29,6 @@ interface Invite {
   };
   host?: { display_name: string | null };
   co_hosts?: { display_name: string | null }[];
-  counts?: { going: number; maybe: number };
-  my_rsvp?: { status: RsvpStatus } | null;
   announcements?: AnnouncementItem[];
 }
 
@@ -42,6 +40,7 @@ export default function InviteInApp() {
   const { session, profile } = useAuth();
   const [invite, setInvite] = useState<Invite | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await supabase.rpc('get_invite', { p_token: token });
@@ -72,10 +71,16 @@ export default function InviteInApp() {
   const e = invite.event;
   const canRsvp = invite.state === 'active' && !!session && !!profile?.display_name;
 
-  async function respond(status: RsvpStatus) {
+  async function respond(status: RsvpStatus, plusOnes?: number) {
     setError(null);
-    const { error: rpcError } = await supabase.rpc('rsvp_as_user', { p_token: token, p_status: status });
-    if (rpcError) setError(t(`errors.${errorKey(rpcError)}`, t('common.error')));
+    setBusy(true);
+    const { error: rpcError } = await supabase.rpc('rsvp_as_user', {
+      p_token: token,
+      p_status: status,
+      p_plus_ones: plusOnes,
+    });
+    setBusy(false);
+    if (rpcError) setError(rsvpErrorText(t, rpcError, e.max_plus_ones));
     else {
       await load();
       void maybeAskForPush('rsvp');
@@ -100,17 +105,7 @@ export default function InviteInApp() {
       ) : null}
 
       {canRsvp ? (
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {(['going', 'maybe', 'declined'] as const).map((s) => (
-            <View key={s} style={{ flex: 1 }}>
-              <Button
-                variant={invite.my_rsvp?.status === s ? 'primary' : 'secondary'}
-                title={t(`rsvp.${s}`)}
-                onPress={() => respond(s)}
-              />
-            </View>
-          ))}
-        </View>
+        <RsvpControls invite={invite} busy={busy} onRespond={(s, n) => void respond(s, n)} />
       ) : invite.state === 'active' ? (
         <Button
           title={t('rsvp.going')}
@@ -118,7 +113,7 @@ export default function InviteInApp() {
         />
       ) : null}
       <ErrorText>{error}</ErrorText>
-      <Text style={{ color: c.muted }}>{t('rsvp.people_going', { count: invite.counts?.going ?? 0 })}</Text>
+      <CountsLine counts={invite.counts} />
       {!session ? <Button variant="ghost" title={t('invite.get_app')} onPress={() => router.replace('/sign-in')} /> : null}
     </ScrollView>
   );

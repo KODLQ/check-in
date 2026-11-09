@@ -30,15 +30,23 @@ The system SHALL let a signed-in host create an event with only a title, a start
 - **THEN** the event is not saved and the invalid field is indicated
 
 ### Requirement: Edit event
-The system SHALL let the host edit any event field, including plus-one and capacity settings, until the event has ended. Guests SHALL see the latest details the next time they view the invite. Changing these settings SHALL NOT remove or change existing responses.
+The system SHALL let the host and co-hosts edit any event field, including plus-one and capacity settings, until the event has ended. Guests SHALL see the latest details the next time they view the invite. Changing these settings SHALL NOT remove or change existing responses.
 
 #### Scenario: Host changes time
 - **WHEN** a host changes the start time of an upcoming event
 - **THEN** the invite page shows the new time and marks that the time was updated
 
+#### Scenario: Co-host changes time
+- **WHEN** a co-host changes the start time of an upcoming event
+- **THEN** the invite page shows the new time and marks that the time was updated
+
 #### Scenario: Non-host cannot edit
-- **WHEN** anyone other than the host attempts to change the event
+- **WHEN** anyone other than the host or a co-host attempts to change the event
 - **THEN** the change is rejected
+
+#### Scenario: Co-host raises capacity
+- **WHEN** a co-host raises the capacity of an event with waitlisted guests
+- **THEN** the change is saved and waitlisted guests who now fit are promoted, as when the owner does it
 
 #### Scenario: Host turns off plus-ones
 - **WHEN** a host turns off plus-ones while some guests are Going with plus-ones
@@ -49,11 +57,19 @@ The system SHALL let the host edit any event field, including plus-one and capac
 - **THEN** that guest stays Going +3 until they change their answer, which must then respect the new maximum
 
 ### Requirement: Host event list
-The system SHALL show a signed-in host their upcoming and past events, with the count of Going and Maybe responses for each. The Going count SHALL include plus-ones, and events with a capacity SHALL show the Going count against it.
+The system SHALL show a signed-in host their upcoming and past events, including events they co-host, with the count of Going and Maybe responses for each. Events they co-host SHALL be labelled "Co-host". The Going count SHALL include plus-ones, and events with a capacity SHALL show the Going count against it.
 
 #### Scenario: Host views events
 - **WHEN** a host opens the app
 - **THEN** they see upcoming events first, sorted by start time, each with Going and Maybe counts
+
+#### Scenario: Co-hosted event in list
+- **WHEN** a user who co-hosts an upcoming event opens the app
+- **THEN** that event appears among their upcoming events in start-time order, with Going and Maybe counts and a "Co-host" label
+
+#### Scenario: Co-host removed
+- **WHEN** a user stops being a co-host of an event and refreshes their event list
+- **THEN** that event no longer appears in their list
 
 #### Scenario: Event with capacity and plus-ones
 - **WHEN** an event with capacity 30 has 10 Going guests bringing 4 plus-ones in total

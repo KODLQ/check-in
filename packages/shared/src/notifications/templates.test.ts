@@ -71,6 +71,17 @@ describe('notification templates', () => {
     expect(renderPush('event_cancelled', 'de', ctx).title).toBe('Fredagshäng is cancelled');
   });
 
+  it('names a guest who joined the waitlist in the host digest', () => {
+    const replies = [{ display_name: 'Ida', status: 'waitlisted' as const }];
+    expect(renderPush('rsvp_digest', 'en', { ...ctx, replies }).body).toBe('Ida: Waitlist');
+    expect(renderPush('rsvp_digest', 'sv', { ...ctx, replies }).body).toBe('Ida: Väntelista');
+  });
+
+  it('tells a promoted guest they got a spot', () => {
+    expect(renderPush('waitlist_promoted', 'en', ctx).title).toBe('You got a spot at Fredagshäng');
+    expect(renderEmail('waitlist_promoted', 'sv', ctx).subject).toBe('Du fick en plats: Fredagshäng');
+  });
+
   it('puts the deep link in push data', () => {
     expect(renderPush('rsvp_digest', 'en', { ...ctx, urlPath: '/events/abc' }).data).toEqual({
       kind: 'rsvp_digest',
