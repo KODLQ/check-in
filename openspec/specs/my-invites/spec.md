@@ -6,7 +6,7 @@ Gives a signed-in user one place in the app for the events they have been invite
 ## Requirements
 
 ### Requirement: Invites listed with hosted events
-The app SHALL show a signed-in user every event they hold an RSVP for through their account (Going, Maybe or Can't go), together with the events they host or co-host. Each item SHALL be labelled as hosted by the user, co-hosted by the user, or an invite. An event the user hosts or co-hosts SHALL appear only once, as hosted or co-hosted.
+The app SHALL show a signed-in user every event they hold an RSVP for through their account (Going, Maybe, Can't go or on the waitlist), together with the events they host or co-host. Each item SHALL be labelled as hosted by the user, co-hosted by the user, or an invite. An event the user hosts or co-hosts SHALL appear only once, as hosted or co-hosted.
 
 #### Scenario: Guest with an account opens the app
 - **WHEN** a signed-in user who answered Going to someone else's event opens the app
@@ -32,14 +32,18 @@ The list SHALL show upcoming events first, ordered by start time ascending, foll
 - **THEN** the two upcoming events appear first, soonest first, followed by the past event
 
 ### Requirement: Own answer shown
-Each invite in the list SHALL show the user's own current answer (Going, Maybe or Can't go), the event title, start time and host display name.
+Each invite in the list SHALL show the user's own current answer (Going, Maybe, Can't go or Waitlist), the event title, start time and host display name. A Going answer with plus-ones SHALL show them ("Going +2").
 
 #### Scenario: Answer shown on list item
 - **WHEN** a user answered Maybe to an invite
 - **THEN** the list item for that event shows "Maybe" as their answer
 
+#### Scenario: Waitlisted invite
+- **WHEN** a user's Going answer was put on the event's waitlist
+- **THEN** the list item shows "Waitlist" as their answer
+
 ### Requirement: Change answer in the app
-For an invite whose event is neither cancelled nor ended, the app SHALL let the user change their answer or withdraw their response. This SHALL work even if the event's invite link has since been revoked. A change SHALL update the existing response, not create a new one.
+For an invite whose event is neither cancelled nor ended, the app SHALL let the user change their answer or withdraw their response. This SHALL work even if the event's invite link has since been revoked. A change SHALL update the existing response, not create a new one. When the host allows plus-ones, the user SHALL be able to change their plus-ones, and the event's capacity and waitlist rules SHALL apply as on the invite page.
 
 #### Scenario: Change from Maybe to Going
 - **WHEN** a user opens an upcoming invite they answered Maybe and taps Going
@@ -52,6 +56,14 @@ For an invite whose event is neither cancelled nor ended, the app SHALL let the 
 #### Scenario: Link revoked after answering
 - **WHEN** the host regenerated the invite link after the user answered
 - **THEN** the user can still see the event in their list and change their answer in the app
+
+#### Scenario: Going on a full event from the app
+- **WHEN** a user who answered Maybe taps Going on an invite whose event is full
+- **THEN** they are put on the waitlist and see their position
+
+#### Scenario: Withdraw frees a spot
+- **WHEN** a Going user withdraws from the app on a full event with a waitlist
+- **THEN** the first waitlisted guest who fits is promoted
 
 ### Requirement: Past and cancelled invites marked
 Invites for events that have ended or been cancelled SHALL stay in the list, visibly marked as past or cancelled. The app SHALL NOT accept answer changes for them.
