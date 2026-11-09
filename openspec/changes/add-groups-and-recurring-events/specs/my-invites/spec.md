@@ -26,7 +26,7 @@ The app SHALL show a signed-in user every event they hold an RSVP for through th
 - **THEN** the event is listed as an invite marked "Not answered yet"
 
 ### Requirement: Change answer in the app
-For an invite whose event is neither cancelled nor ended, the app SHALL let the user change their answer or withdraw their response. This SHALL work even if the event's invite link has since been revoked. A change SHALL update the existing response, not create a new one. When the host allows plus-ones, the user SHALL be able to change their plus-ones, and the event's capacity and waitlist rules SHALL apply as on the invite page. A group member SHALL be able to give a first answer in the app to an event that invites their group.
+For an invite whose event is neither cancelled nor ended, the app SHALL let the user change their answer or withdraw their response. This SHALL work even if the event's invite link has since been revoked. A change SHALL update the existing response, not create a new one. When the host allows plus-ones, the user SHALL be able to change their plus-ones, and the event's capacity and waitlist rules SHALL apply as on the invite page.
 
 #### Scenario: Change from Maybe to Going
 - **WHEN** a user opens an upcoming invite they answered Maybe and taps Going
@@ -48,14 +48,6 @@ For an invite whose event is neither cancelled nor ended, the app SHALL let the 
 - **WHEN** a Going user withdraws from the app on a full event with a waitlist
 - **THEN** the first waitlisted guest who fits is promoted
 
-#### Scenario: First answer from a group member
-- **WHEN** a group member taps Going on a group event they had not answered
-- **THEN** a response linked to their account is created with their display name and the host sees them as Going
-
-#### Scenario: Group member withdraws
-- **WHEN** a group member withdraws their answer to an upcoming group event
-- **THEN** the response is removed and the event shows as "Not answered yet" again
-
 ### Requirement: Only your own invites
 The list and invite details SHALL only include events for which the requesting account holds a response, or which invite a group the account currently belongs to. No user SHALL be able to see which events another user was invited to or answered.
 
@@ -72,6 +64,17 @@ The list and invite details SHALL only include events for which the requesting a
 - **THEN** no event details are returned
 
 ## ADDED Requirements
+
+### Requirement: First answer to a group event
+A group member SHALL be able to give a first answer in the app to an upcoming event that invites their group, creating a response linked to their account. Withdrawing it SHALL return the event to "Not answered yet".
+
+#### Scenario: First answer from a group member
+- **WHEN** a group member taps Going on a group event they had not answered
+- **THEN** a response linked to their account is created with their display name and the host sees them as Going
+
+#### Scenario: Group member withdraws
+- **WHEN** a group member withdraws their answer to an upcoming group event
+- **THEN** the response is removed and the event shows as "Not answered yet" again
 
 ### Requirement: Series invites grouped in the list
 Upcoming invites that are dates of the same series SHALL appear as one item showing the next date, the user's answer for it, the repeat rule, and how many later dates the user has not answered. Opening the item SHALL show every upcoming date of the series with the user's answer for each.

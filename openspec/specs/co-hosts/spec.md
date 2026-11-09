@@ -84,7 +84,7 @@ A co-host SHALL be able to edit event details and cover, share the guest invite 
 - **THEN** the old link stops working, the new link works for everyone managing the event, and existing RSVPs are kept
 
 ### Requirement: Owner-only actions
-Only the owner SHALL be able to cancel the event, delete the event, create or revoke co-host invite links, and remove co-hosts. These actions SHALL be rejected server-side for co-hosts and SHALL NOT be offered to them in the app.
+Only the owner SHALL be able to cancel the event, delete the event, create or revoke co-host invite links, and remove co-hosts. These actions SHALL be rejected server-side for co-hosts and SHALL NOT be offered to them in the app. For a date of a group's series, the group's admins SHALL have the same rights as the owner, except deleting the date.
 
 #### Scenario: Co-host tries to cancel
 - **WHEN** a co-host attempts to cancel the event, including by calling the backend directly
@@ -97,6 +97,14 @@ Only the owner SHALL be able to cancel the event, delete the event, create or re
 #### Scenario: Co-host tries to remove another co-host
 - **WHEN** a co-host attempts to remove another co-host
 - **THEN** the request is rejected and the other co-host keeps access
+
+#### Scenario: Group admin cancels a series date
+- **WHEN** an admin of "AW crew" cancels the 25 Dec date of the group's weekly series
+- **THEN** the date is cancelled as if the owner had done it
+
+#### Scenario: Group admin tries to delete a series date
+- **WHEN** an admin of "AW crew" tries to delete a date of the group's series, including by calling the backend directly
+- **THEN** the date is not deleted
 
 ### Requirement: Leave as co-host
 A co-host SHALL be able to leave an event at any time. Leaving SHALL immediately remove their access, including live guest-list updates, and remove their name from the event's host names.

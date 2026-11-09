@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Account deletion
-The system SHALL let a signed-in host delete their account. Deleting an account SHALL delete their profile, the events they own, and all RSVPs to those events, for everyone including those events' co-hosts. It SHALL also delete every RSVP the account made or claimed on other people's events. For events the person only co-hosts, it SHALL remove only their co-host membership; those events and their RSVPs SHALL remain. It SHALL also delete its group memberships and invitations. Each group it owns, with the group's series and their dates, SHALL pass to its longest-standing admin, or else its longest-standing member. A group with no other member SHALL be deleted with its series and their dates.
+The system SHALL let a signed-in host delete their account. Deleting an account SHALL delete their profile, the events they own, and all RSVPs to those events, for everyone including those events' co-hosts. It SHALL also delete every RSVP the account made or claimed on other people's events. For events the person only co-hosts, it SHALL remove only their co-host membership; those events and their RSVPs SHALL remain.
 
 #### Scenario: Host deletes account
 - **WHEN** a host confirms account deletion
@@ -24,6 +24,11 @@ The system SHALL let a signed-in host delete their account. Deleting an account 
 #### Scenario: Owner with co-hosts deletes account
 - **WHEN** the owner of an event that has co-hosts deletes their account
 - **THEN** the event and its RSVPs are deleted and the event disappears from the co-hosts' event lists
+
+## ADDED Requirements
+
+### Requirement: Groups on account deletion
+Deleting an account SHALL delete its group memberships and invitations. Each group it owns, with the group's series and their dates, SHALL pass to its longest-standing admin, or else its longest-standing member. A group with no other member SHALL be deleted with its series and their dates.
 
 #### Scenario: Group owner deletes account
 - **WHEN** the owner of "AW crew", which has admin Erik and other members, deletes their account

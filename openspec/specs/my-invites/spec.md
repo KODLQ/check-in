@@ -6,7 +6,7 @@ Gives a signed-in user one place in the app for the events they have been invite
 ## Requirements
 
 ### Requirement: Invites listed with hosted events
-The app SHALL show a signed-in user every event they hold an RSVP for through their account (Going, Maybe, Can't go or on the waitlist), together with the events they host or co-host. Each item SHALL be labelled as hosted by the user, co-hosted by the user, or an invite. An event the user hosts or co-hosts SHALL appear only once, as hosted or co-hosted.
+The app SHALL show a signed-in user every event they hold an RSVP for through their account (Going, Maybe, Can't go or on the waitlist), every upcoming event that invites a group they belong to, together with the events they host or co-host. Each item SHALL be labelled as hosted by the user, co-hosted by the user, or an invite. An event the user hosts or co-hosts SHALL appear only once, as hosted or co-hosted.
 
 #### Scenario: Guest with an account opens the app
 - **WHEN** a signed-in user who answered Going to someone else's event opens the app
@@ -23,6 +23,10 @@ The app SHALL show a signed-in user every event they hold an RSVP for through th
 #### Scenario: Co-host who also answered
 - **WHEN** a user answered Going to an event and later became its co-host
 - **THEN** the event appears once, labelled "Co-host", and not as an invite
+
+#### Scenario: Group event not answered yet
+- **WHEN** a member of "AW crew" opens the app while an upcoming event invites that group
+- **THEN** the event is listed as an invite marked "Not answered yet"
 
 ### Requirement: Upcoming first ordering
 The list SHALL show upcoming events first, ordered by start time ascending, followed by past events ordered by start time descending.
@@ -84,15 +88,19 @@ Opening an invite from the list SHALL show the same event details and guest-list
 - **THEN** the details show only the number of people going, not their names
 
 ### Requirement: Only your own invites
-The list and invite details SHALL only include events for which the requesting account holds a response. No user SHALL be able to see which events another user was invited to or answered.
+The list and invite details SHALL only include events for which the requesting account holds a response, or which invite a group the account currently belongs to. No user SHALL be able to see which events another user was invited to or answered.
 
 #### Scenario: Another user's invites
-- **WHEN** a signed-in user requests invites or invite details for an event they hold no response for
+- **WHEN** a signed-in user requests invites or invite details for an event they hold no response for and whose group they do not belong to
 - **THEN** no event details are returned, and the response is the same as for an event that does not exist
 
 #### Scenario: Signed-out request
 - **WHEN** a request for invites is made without signing in
 - **THEN** it is rejected
+
+#### Scenario: Former member
+- **WHEN** a user who left a group requests details of a group event they never answered
+- **THEN** no event details are returned
 
 ### Requirement: Create-your-own nudge
 The app SHALL prompt the user to create an event when their list is empty, and when they have invites but host no upcoming events. The prompt SHALL open event creation in one tap and SHALL NOT block the list.
@@ -104,3 +112,25 @@ The app SHALL prompt the user to create an event when their list is empty, and w
 #### Scenario: Only invites
 - **WHEN** a signed-in user has upcoming invites but hosts no upcoming events
 - **THEN** a dismissible "Plan your own" card is shown above the list
+
+### Requirement: Series invites grouped in the list
+Upcoming invites that are dates of the same series SHALL appear as one item showing the next date, the user's answer for it, the repeat rule, and how many later dates the user has not answered. Opening the item SHALL show every upcoming date of the series with the user's answer for each.
+
+#### Scenario: Weekly group series
+- **WHEN** a member of a group invited to a weekly series with four upcoming dates opens the app
+- **THEN** they see one item for the series showing the next Friday, "Every Friday" and "3 more dates not answered"
+
+#### Scenario: Answering a later date
+- **WHEN** the member opens the item and answers Going to the third date
+- **THEN** that date shows Going and the item shows "2 more dates not answered"
+
+### Requirement: First answer to a group event
+A group member SHALL be able to give a first answer in the app to an upcoming event that invites their group, creating a response linked to their account. Withdrawing it SHALL return the event to "Not answered yet".
+
+#### Scenario: First answer from a group member
+- **WHEN** a group member taps Going on a group event they had not answered
+- **THEN** a response linked to their account is created with their display name and the host sees them as Going
+
+#### Scenario: Group member withdraws
+- **WHEN** a group member withdraws their answer to an upcoming group event
+- **THEN** the response is removed and the event shows as "Not answered yet" again

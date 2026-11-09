@@ -76,3 +76,22 @@ Deleting an account SHALL also delete every event wall post and photo the accoun
 #### Scenario: Host deletes account
 - **WHEN** a host with wall posts on their events deletes their account
 - **THEN** every post and photo on those events' walls is removed together with the events
+
+### Requirement: Groups on account deletion
+Deleting an account SHALL delete its group memberships and invitations. Each group it owns, with the group's series and their dates, SHALL pass to its longest-standing admin, or else its longest-standing member. A group with no other member SHALL be deleted with its series and their dates.
+
+#### Scenario: Group owner deletes account
+- **WHEN** the owner of "AW crew", which has admin Erik and other members, deletes their account
+- **THEN** Erik becomes the owner of "AW crew" and every other member stays
+
+#### Scenario: Sole member deletes account
+- **WHEN** a user who is the only member of a group they own deletes their account
+- **THEN** that group, its series and their dates are deleted
+
+#### Scenario: Group with a series passes on
+- **WHEN** the owner of "AW crew", which has a weekly series, deletes their account and Sara is the longest-standing member and there are no admins
+- **THEN** Sara owns "AW crew" and its series, and the series' dates and answers stay
+
+#### Scenario: Group member deletes account
+- **WHEN** a member of Anna's group deletes their account
+- **THEN** they are removed from the group and Anna's group stays intact
