@@ -101,11 +101,13 @@ describe('home list', () => {
     expect(router.push).toHaveBeenCalledWith('/events/h1');
   });
 
-  it('shows the empty state with a create button', async () => {
+  it('shows the empty state with a single create button and a note about invites', async () => {
     mockData([], []);
     await render(<Events />);
     expect(await screen.findByTestId('events-empty')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('empty-plan-own'));
+    expect(screen.getByText('Invites you get show up here too.')).toBeTruthy();
+    expect(screen.queryByTestId('empty-plan-own')).toBeNull();
+    await fireEvent.press(screen.getByTestId('new-event'));
     expect(router.push).toHaveBeenCalledWith('/events/new');
   });
 

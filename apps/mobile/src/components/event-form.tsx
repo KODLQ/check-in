@@ -9,9 +9,13 @@ import {
   type EventInput,
   type PollErrors,
 } from '@check-in/shared';
-import { useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Switch, Text, View } from 'react-native';
+import {
+  KeyboardAwareScrollView,
+  type KeyboardAwareScrollViewRef,
+} from 'react-native-keyboard-controller';
 
 import { Cover } from './cover';
 import { DateField } from './date-field';
@@ -32,6 +36,21 @@ export interface EventFormValues extends EventInput {
 /** Far enough ahead to pass the start-time rule when only the other fields are being validated. */
 const PLACEHOLDER_START_MS = 365 * 24 * 60 * 60 * 1000;
 
+/**
+ * Comparable snapshot of the form's editable state. The form is "dirty" (leaving asks "Discard
+ * changes?") when the current snapshot differs from the one taken when it opened.
+ */
+export function formSnapshot(state: Record<string, unknown>): string {
+  return JSON.stringify(state, (_key, value: unknown) => (typeof value === 'string' ? value.trim() : value));
+}
+
+/** What a screen needs to put Cancel / Save in its header. */
+export interface EventFormHeader {
+  submit: () => void;
+  busy: boolean;
+  dirty: boolean;
+}
+
 /** Next full hour + 1 day at 19:00-ish is a reasonable party default. */
 export function defaultStart(now = new Date()): Date {
   const d = new Date(now);
@@ -48,7 +67,13 @@ export function EventForm({
   now = () => new Date(),
   allowPoll = false,
   datePending = false,
+  renderHeader,
+  onDirtyChange,
 }: {
+  /** Header buttons (Cancel / Save) of the screen showing the form. */
+  renderHeader?: (header: EventFormHeader) => ReactNode;
+  /** Called when the form gets or loses unsaved changes. */
+  onDirtyChange?: (dirty: boolean) => void;
   initial?: Partial<EventFormValues>;
   /** Offer "Fixed date / Let guests vote" (creating an event). */
   allowPoll?: boolean;
@@ -78,7 +103,9 @@ export function EventForm({
   // Guests (add-guest-capacity): optional, collapsed so creating an event stays a 30-second job.
   const [allowPlusOnes, setAllowPlusOnes] = useState(initial?.allowPlusOnes ?? false);
   const [maxPlusOnes, setMaxPlusOnes] = useState(initial?.maxPlusOnes ?? 1);
-  const [capacityText, setCapacityText] = useState(initial?.capacity != null ? String(initial.capacity) : '');
+  const [capacityText, setCapacityText] = useState(
+    initial?.capacity != null ? String(initial.capacity) : '',
+  );
   const [guestsOpen, setGuestsOpen] = useState(false);
   // Date poll (add-date-polls).
   const [mode, setMode] = useState<'fixed' | 'vote'>(initial?.poll ? 'vote' : 'fixed');
@@ -89,12 +116,60 @@ export function EventForm({
   const [pollErrs, setPollErrs] = useState<PollErrors | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [pickingCover, setPickingCover] = useState(false);
+  const scroll = useRef<KeyboardAwareScrollViewRef>(null);
+  const locationY = useRef(0);
+
+  const snapshot = formSnapshot({
+    title,
+    startsAt,
+    endsAt,
+    location,
+    description,
+    theme,
+    coverPath,
+    guestListVisible,
+    allowPlusOnes,
+    maxPlusOnes,
+    capacityText,
+    mode,
+    pollOptions,
+    closesAt,
+  });
+  const [initialSnapshot] = useState(snapshot);
+  const dirty = snapshot !== initialSnapshot;
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const err = (k: string) => (errors[k] ? t(`errors.${errors[k]}`) : null);
+  /** A field's error goes away as soon as the field is changed; submitting validates again. */
+  const clearErrors = (...keys: string[]) => {
+    if (keys.some((k) => errors[k] || errors._))
+      setErrors(({ _: _form, ...rest }) =>
+        Object.fromEntries(Object.entries(rest).filter(([k]) => !keys.includes(k))),
+      );
+  };
+
+  async function pickCover() {
+    if (!onPickCover || pickingCover) return;
+    // The system photo picker takes a few seconds to open, and the upload a few more.
+    setPickingCover(true);
+    try {
+      const path = await onPickCover();
+      if (path) setCoverPath(path);
+    } catch (e) {
+      if (__DEV__) console.warn('cover upload failed', e);
+      Alert.alert(t('common.error'));
+    } finally {
+      setPickingCover(false);
+    }
+  }
 
   async function submit() {
     const trimmedCapacity = capacityText.trim();
-    const capacity = trimmedCapacity === '' ? null : /^\d+$/.test(trimmedCapacity) ? Number(trimmedCapacity) : NaN;
+    const capacity =
+      trimmedCapacity === '' ? null : /^\d+$/.test(trimmedCapacity) ? Number(trimmedCapacity) : NaN;
     const voting = allowPoll && mode === 'vote';
     // Without a fixed date (poll, or editing a pending event) only the other fields are validated here.
     const noDate = voting || datePending;
@@ -126,11 +201,19 @@ export function EventForm({
     try {
       const poll = voting
         ? {
-            options: pollOptions.map((o) => ({ startsAt: o.startsAt, ...(o.endsAt ? { endsAt: o.endsAt } : {}) })),
+            options: pollOptions.map((o) => ({
+              startsAt: o.startsAt,
+              ...(o.endsAt ? { endsAt: o.endsAt } : {}),
+            })),
             closesAt,
           }
         : undefined;
-      const result = await onSubmit({ ...parsed.data, coverPath, guestListVisible, ...(poll ? { poll } : {}) });
+      const result = await onSubmit({
+        ...parsed.data,
+        coverPath,
+        guestListVisible,
+        ...(poll ? { poll } : {}),
+      });
       if (result) setErrors({ _: result });
     } finally {
       setBusy(false);
@@ -138,178 +221,279 @@ export function EventForm({
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={{ backgroundColor: c.bg }}
-        contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 60 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Cover coverPath={coverPath} theme={theme} height={140} />
-        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          {EVENT_THEMES.map((th) => (
+    <KeyboardAwareScrollView
+      ref={scroll}
+      bottomOffset={24}
+      contentInsetAdjustmentBehavior="automatic"
+      style={{ backgroundColor: c.bg }}
+      contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 60 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {renderHeader?.({ submit: () => void submit(), busy, dirty })}
+      <Cover coverPath={coverPath} theme={theme} height={140} />
+      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        {EVENT_THEMES.map((th) => {
+          const selected = theme === th.id && !coverPath;
+          return (
             <Pressable
               key={th.id}
-              accessibilityLabel={th.id}
+              testID={`theme-${th.id}`}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={t('events.theme_label', { name: t(`events.themes.${th.id}`) })}
               onPress={() => {
                 setTheme(th.id);
                 setCoverPath(null);
               }}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundImage: `linear-gradient(135deg, ${th.colors[0]}, ${th.colors[1]})`,
-                borderWidth: theme === th.id && !coverPath ? 3 : 0,
-                borderColor: c.text,
-              }}
-            />
-          ))}
-          {onPickCover ? (
-            <Pressable
-              onPress={async () => {
-                const path = await onPickCover();
-                if (path) setCoverPath(path);
-              }}
+              // 44pt touch target around a 36pt swatch.
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
             >
-              <Text style={{ color: c.accent, fontWeight: '600' }}>{t('events.upload_cover')}</Text>
-            </Pressable>
-          ) : null}
-        </View>
-
-        <Field
-          testID="title"
-          value={title}
-          onChangeText={setTitle}
-          placeholder={t('events.title_placeholder')}
-          style={{ fontSize: 22, fontWeight: '700' }}
-          maxLength={100}
-          error={err('title')}
-        />
-
-        {allowPoll ? (
-          <View style={{ flexDirection: 'row', gap: 8 }} accessibilityRole="radiogroup">
-            {(['fixed', 'vote'] as const).map((m) => (
-              <View key={m} style={{ flex: 1 }}>
-                <Button
-                  testID={`mode-${m}`}
-                  variant={mode === m ? 'primary' : 'secondary'}
-                  title={t(m === 'fixed' ? 'polls.mode_fixed' : 'polls.mode_vote')}
-                  onPress={() => setMode(m)}
-                />
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {datePending ? null : allowPoll && mode === 'vote' ? (
-          <PollOptionsEditor
-            options={pollOptions}
-            onChange={setPollOptions}
-            closesAt={closesAt}
-            onChangeClosesAt={setClosesAt}
-            errors={pollErrs}
-            now={now}
-          />
-        ) : (
-          <>
-            <DateField testID="starts-at" label={t('events.starts')} value={startsAt} onChange={setStartsAt} error={err('startsAt')} />
-            {endsAt ? (
-              <DateField testID="ends-at" label={t('events.ends')} value={endsAt} onChange={setEndsAt} error={err('endsAt')} />
-            ) : (
-              <Button
-                variant="ghost"
-                title={`+ ${t('events.add_end')}`}
-                onPress={() => setEndsAt(new Date(startsAt.getTime() + 3 * 60 * 60 * 1000))}
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundImage: `linear-gradient(135deg, ${th.colors[0]}, ${th.colors[1]})`,
+                  borderWidth: selected ? 3 : 0,
+                  borderColor: c.text,
+                }}
               />
-            )}
-          </>
-        )}
+            </Pressable>
+          );
+        })}
+        {onPickCover ? (
+          <Pressable
+            testID="upload-cover"
+            accessibilityRole="button"
+            accessibilityState={{ busy: pickingCover, disabled: pickingCover }}
+            disabled={pickingCover}
+            onPress={() => void pickCover()}
+            style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}
+          >
+            {pickingCover ? <ActivityIndicator size="small" color={c.accent} /> : null}
+            <Text style={{ color: pickingCover ? c.muted : c.accent, fontWeight: '600' }}>
+              {pickingCover ? t('events.opening_photos') : t('events.upload_cover')}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
 
+      <Field
+        testID="title"
+        value={title}
+        onChangeText={(text) => {
+          setTitle(text);
+          clearErrors('title');
+        }}
+        placeholder={t('events.title_placeholder')}
+        style={{ fontSize: 22, fontWeight: '700' }}
+        maxLength={100}
+        error={err('title')}
+      />
+
+      {allowPoll ? (
+        <View style={{ flexDirection: 'row', gap: 8 }} accessibilityRole="radiogroup">
+          {(['fixed', 'vote'] as const).map((m) => (
+            <View key={m} style={{ flex: 1 }}>
+              <Button
+                testID={`mode-${m}`}
+                variant={mode === m ? 'primary' : 'secondary'}
+                title={t(m === 'fixed' ? 'polls.mode_fixed' : 'polls.mode_vote')}
+                onPress={() => setMode(m)}
+              />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {datePending ? null : allowPoll && mode === 'vote' ? (
+        <PollOptionsEditor
+          options={pollOptions}
+          onChange={(o) => {
+            setPollOptions(o);
+            setPollErrs(null);
+          }}
+          closesAt={closesAt}
+          onChangeClosesAt={(d) => {
+            setClosesAt(d);
+            setPollErrs(null);
+          }}
+          errors={pollErrs}
+          now={now}
+        />
+      ) : (
+        <>
+          <DateField
+            testID="starts-at"
+            label={t('events.starts')}
+            value={startsAt}
+            onChange={(d) => {
+              setStartsAt(d);
+              clearErrors('startsAt', 'endsAt');
+            }}
+            error={err('startsAt')}
+          />
+          {endsAt ? (
+            <DateField
+              testID="ends-at"
+              label={t('events.ends')}
+              value={endsAt}
+              onChange={(d) => {
+                setEndsAt(d);
+                clearErrors('endsAt');
+              }}
+              onClear={() => {
+                setEndsAt(undefined);
+                clearErrors('endsAt');
+              }}
+              clearLabel={t('events.remove_end')}
+              error={err('endsAt')}
+            />
+          ) : (
+            <Button
+              testID="add-end"
+              variant="ghost"
+              title={t('events.add_end')}
+              onPress={() => setEndsAt(new Date(startsAt.getTime() + 3 * 60 * 60 * 1000))}
+            />
+          )}
+        </>
+      )}
+
+      <View onLayout={(e) => (locationY.current = e.nativeEvent.layout.y)}>
         <LocationField
           label={t('events.location')}
           placeholder={t('events.location_placeholder')}
           value={location}
-          onChange={setLocation}
+          onChange={(v) => {
+            setLocation(v);
+            clearErrors('locationText', 'latitude', 'longitude');
+          }}
+          // Bring the field near the top so the suggestions below it are not under the keyboard.
+          onFocus={() =>
+            setTimeout(() => scroll.current?.scrollTo({ y: Math.max(locationY.current - 12, 0), animated: true }), 350)
+          }
           error={err('locationText') ?? err('latitude')}
         />
+      </View>
 
-        <Field
-          label={`${t('events.description')} (${t('common.optional')})`}
-          value={description}
-          onChangeText={setDescription}
-          placeholder={t('events.description_placeholder')}
-          multiline
-          maxLength={2000}
+      <Field
+        label={`${t('events.description')} (${t('common.optional')})`}
+        value={description}
+        onChangeText={setDescription}
+        placeholder={t('events.description_placeholder')}
+        multiline
+        maxLength={2000}
+      />
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flex: 1 }}>
+          <Label>{t('events.show_guest_list')}</Label>
+        </View>
+        <Switch
+          value={guestListVisible}
+          onValueChange={setGuestListVisible}
+          trackColor={{ true: c.accent }}
+          thumbColor="#FFFFFF"
         />
+      </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flex: 1 }}>
-            <Label>{t('events.show_guest_list')}</Label>
+      <View style={{ gap: 14 }}>
+        <Pressable
+          testID="guests-toggle"
+          accessibilityRole="button"
+          accessibilityState={{ expanded: guestsOpen }}
+          onPress={() => setGuestsOpen((o) => !o)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <View style={{ flex: 1, gap: 2 }}>
+            <Label>{t('events.guests_section')}</Label>
+            <Text testID="guests-summary" style={{ color: c.muted, fontSize: 15 }}>
+              {t('events.guests_summary', {
+                plus: allowPlusOnes
+                  ? t('events.plus_ones_up_to', { count: maxPlusOnes })
+                  : t('events.plus_ones_off'),
+                limit: capacityText.trim()
+                  ? t('events.limit_of', { count: capacityText.trim() })
+                  : t('events.no_limit'),
+              })}
+            </Text>
           </View>
-          <Switch value={guestListVisible} onValueChange={setGuestListVisible} />
-        </View>
-
-        <View style={{ gap: 14 }}>
-          <Pressable
-            testID="guests-toggle"
-            accessibilityRole="button"
-            accessibilityState={{ expanded: guestsOpen }}
-            onPress={() => setGuestsOpen((o) => !o)}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
-          >
-            <View style={{ flex: 1, gap: 2 }}>
-              <Label>{t('events.guests_section')}</Label>
-              <Text testID="guests-summary" style={{ color: c.muted, fontSize: 15 }}>
-                {t('events.guests_summary', {
-                  plus: allowPlusOnes ? t('events.plus_ones_up_to', { count: maxPlusOnes }) : t('events.plus_ones_off'),
-                  limit: capacityText.trim() ? t('events.limit_of', { count: capacityText.trim() }) : t('events.no_limit'),
-                })}
-              </Text>
-            </View>
-            <Text style={{ color: c.muted, fontSize: 18 }}>{guestsOpen ? '⌃' : '⌄'}</Text>
-          </Pressable>
-          {guestsOpen ? (
-            <View style={{ gap: 14 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flex: 1 }}>
-                  <Body>{t('events.allow_plus_ones')}</Body>
-                </View>
-                <Switch testID="allow-plus-ones" value={allowPlusOnes} onValueChange={setAllowPlusOnes} />
+          <Text style={{ color: c.muted, fontSize: 18 }}>{guestsOpen ? '⌃' : '⌄'}</Text>
+        </Pressable>
+        {guestsOpen ? (
+          <View style={{ gap: 14 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Body>{t('events.allow_plus_ones')}</Body>
               </View>
-              {allowPlusOnes ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Body>{t('events.max_plus_ones')}</Body>
-                  <Stepper
-                    testID="max-plus-ones"
-                    value={maxPlusOnes}
-                    min={1}
-                    max={MAX_PLUS_ONES}
-                    onChange={setMaxPlusOnes}
-                    decreaseLabel={t('rsvp.plus_ones_decrease')}
-                    increaseLabel={t('rsvp.plus_ones_increase')}
-                  />
-                </View>
-              ) : null}
-              <ErrorText testID="max-plus-ones-error">{err('maxPlusOnes')}</ErrorText>
-              <Field
-                testID="capacity"
-                label={`${t('events.capacity')} (${t('common.optional')})`}
-                value={capacityText}
-                onChangeText={setCapacityText}
-                placeholder={t('events.capacity_placeholder')}
-                keyboardType="number-pad"
-                maxLength={4}
-                error={err('capacity')}
+              <Switch
+                testID="allow-plus-ones"
+                value={allowPlusOnes}
+                onValueChange={setAllowPlusOnes}
+                trackColor={{ true: c.accent }}
+                thumbColor="#FFFFFF"
               />
-              <Text style={{ color: c.muted, fontSize: 13 }}>{t('events.capacity_hint')}</Text>
             </View>
-          ) : null}
-        </View>
+            {allowPlusOnes ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Body>{t('events.max_plus_ones')}</Body>
+                <Stepper
+                  testID="max-plus-ones"
+                  value={maxPlusOnes}
+                  min={1}
+                  max={MAX_PLUS_ONES}
+                  onChange={(n) => {
+                    setMaxPlusOnes(n);
+                    clearErrors('maxPlusOnes');
+                  }}
+                  decreaseLabel={t('rsvp.plus_ones_decrease')}
+                  increaseLabel={t('rsvp.plus_ones_increase')}
+                />
+              </View>
+            ) : null}
+            <ErrorText testID="max-plus-ones-error">{err('maxPlusOnes')}</ErrorText>
+            <Field
+              testID="capacity"
+              label={`${t('events.capacity')} (${t('common.optional')})`}
+              value={capacityText}
+              // Whole numbers only: some Android keyboards offer "." and "," even on a number pad.
+              onChangeText={(text) => {
+                setCapacityText(text.replace(/\D/g, ''));
+                clearErrors('capacity');
+              }}
+              placeholder={t('events.capacity_placeholder')}
+              keyboardType="number-pad"
+              inputMode="numeric"
+              maxLength={4}
+              error={err('capacity')}
+            />
+            <Text style={{ color: c.muted, fontSize: 13 }}>{t('events.capacity_hint')}</Text>
+          </View>
+        ) : null}
+      </View>
 
-        <ErrorText testID="form-error">{errors._ ? t(`errors.${errors._}`, t('common.error')) : null}</ErrorText>
-        <Button testID="submit" title={submitLabel} loading={busy} onPress={submit} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <ErrorText testID="form-error">
+        {errors._ ? t(`errors.${errors._}`, t('common.error')) : null}
+      </ErrorText>
+      <Button testID="submit" title={submitLabel} loading={busy} onPress={submit} />
+    </KeyboardAwareScrollView>
   );
 }

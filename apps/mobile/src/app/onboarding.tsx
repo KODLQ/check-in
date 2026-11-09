@@ -1,11 +1,12 @@
-import { displayNameSchema, fieldErrors } from '@check-in/shared';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-import { Body, Button, Field, Screen, Title, useColors } from '@/components/ui';
+import { KeyboardScroll } from '@/components/keyboard-scroll';
+import { Body, Button, Field, Title, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { displayNameErrorKey } from '@/lib/profile';
 import { publicUrl, supabase } from '@/lib/supabase';
 import { pickAndUpload } from '@/lib/upload';
 
@@ -20,9 +21,9 @@ export default function Onboarding() {
   const userId = session?.user.id;
 
   async function save() {
-    const errs = fieldErrors(displayNameSchema.safeParse(name));
-    if (errs) {
-      setError(t(`errors.${errs._}`));
+    const key = displayNameErrorKey(name);
+    if (key) {
+      setError(t(key));
       return;
     }
     if (!userId) return;
@@ -49,14 +50,47 @@ export default function Onboarding() {
   const avatarUrl = publicUrl('avatars', avatarPath);
 
   return (
-    <Screen style={{ paddingTop: 100 }}>
+    <KeyboardScroll contentContainerStyle={{ padding: 20, paddingTop: 100, gap: 16 }}>
       <Title>{t('profile.title')}</Title>
       <View style={{ alignItems: 'center', gap: 8 }}>
         <Pressable onPress={pickAvatar} accessibilityRole="button" accessibilityLabel={t('profile.add_photo')}>
           <View
-            style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: c.surface, overflow: 'hidden' }}
+            testID="avatar"
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: 48,
+              backgroundColor: c.surface,
+              borderWidth: avatarUrl ? 0 : 1,
+              borderColor: c.border,
+              borderStyle: 'dashed',
+              overflow: 'hidden',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            {avatarUrl ? <Image source={avatarUrl} style={{ flex: 1 }} contentFit="cover" /> : null}
+            {avatarUrl ? (
+              <Image source={avatarUrl} style={{ width: 96, height: 96 }} contentFit="cover" />
+            ) : (
+              <Text testID="avatar-placeholder" style={{ fontSize: 30 }}>📷</Text>
+            )}
+          </View>
+          <View
+            style={{
+              position: 'absolute',
+              right: 0,
+              bottom: 0,
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              backgroundColor: c.accent,
+              borderWidth: 2,
+              borderColor: c.bg,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: c.accentText, fontSize: 18, fontWeight: '800', lineHeight: 20 }}>{avatarUrl ? '✎' : '+'}</Text>
           </View>
         </Pressable>
         <Body muted>
@@ -77,6 +111,6 @@ export default function Onboarding() {
         error={error}
       />
       <Button testID="save-name" title={t('common.continue')} loading={busy} onPress={save} />
-    </Screen>
+    </KeyboardScroll>
   );
 }

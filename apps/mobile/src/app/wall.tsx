@@ -3,12 +3,15 @@ import { Image } from 'expo-image';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Modal, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, RefreshControl, Text, View } from 'react-native';
 
-import { Body, Button, Card, ErrorText, Label, Screen, Title, useColors } from '@/components/ui';
+import { KeyboardScroll } from '@/components/keyboard-scroll';
+import { Toast } from '@/components/toast';
+import { Body, Button, Card, ErrorText, Label, Screen, Spinner, Title, useColors } from '@/components/ui';
 import { WallComposer, WallPostItem, type WallAction } from '@/components/wall';
+import { signOut } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
-import { wallApi, wallErrorKey, type WallApi, type WallTarget } from '@/lib/wall';
+import { WallApiError, wallApi, wallErrorKey, type WallApi, type WallTarget } from '@/lib/wall';
 
 type OkFeed = Extract<WallFeed, { state: 'ok' }>;
 
@@ -33,7 +36,13 @@ export default function WallScreen({ api = wallApi }: { api?: WallApi }) {
   const [hasMore, setHasMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The first load failed (no feed to show): offer Retry, and Sign in when the session has expired.
+  const [loadFailed, setLoadFailed] = useState<{ message: string; unauthorized: boolean } | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const hideToast = useCallback(() => setToast(null), []);
+  // Posts whose author was stopped in this session (the feed doesn't say who is blocked per post).
+  const [stoppedPostIds, setStoppedPostIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -41,10 +50,19 @@ export default function WallScreen({ api = wallApi }: { api?: WallApi }) {
       setFeed(next);
       setOlder([]);
       setHasMore(next.state === 'ok' && next.has_more);
+      setLoadFailed(null);
     } catch (e) {
-      setError(t(wallErrorKey(e)));
+      const message = t(wallErrorKey(e));
+      setError(message);
+      setLoadFailed({ message, unauthorized: e instanceof WallApiError && e.code === 'unauthorized' });
     }
   }, [api, target, t]);
+
+  async function retry() {
+    setLoadFailed(null);
+    setError(null);
+    await load();
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -102,14 +120,19 @@ export default function WallScreen({ api = wallApi }: { api?: WallApi }) {
     }
   }
 
-  async function run(action: () => Promise<unknown>) {
+  /** Runs an action, shows a short confirmation on success and reloads the feed either way. */
+  async function run(action: () => Promise<unknown>, success?: string): Promise<boolean> {
     setError(null);
+    let ok = false;
     try {
       await action();
+      ok = true;
+      if (success) setToast(success);
     } catch (e) {
       setError(t(wallErrorKey(e)));
     }
     await load();
+    return ok;
   }
 
   function onAction(post: WallPost, action: WallAction['key']) {
@@ -117,15 +140,36 @@ export default function WallScreen({ api = wallApi }: { api?: WallApi }) {
     if (action === 'delete') {
       Alert.alert(t('wall.delete_confirm'), t('wall.delete_confirm_body'), [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: () => void run(() => api.deletePost(target, post.id)) },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: () => void run(() => api.deletePost(target, post.id), t('wall.deleted_toast')),
+        },
       ]);
     } else if (action === 'delete_all_by') {
-      Alert.alert(t('wall.delete_all_by_confirm', { name: post.display_name }), undefined, [
+      Alert.alert(t('wall.delete_all_by_confirm', { name: post.display_name }), t('wall.delete_confirm_body'), [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: () => void run(() => api.deletePost(target, post.id, true)) },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: () => void run(() => api.deletePost(target, post.id, true), t('wall.deleted_all_toast')),
+        },
       ]);
     } else if (action === 'block' && eventIdForModeration) {
-      void run(() => api.block(eventIdForModeration, post.id));
+      Alert.alert(t('wall.block_confirm', { name: post.display_name }), t('wall.block_confirm_body'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('wall.block_button'),
+          style: 'destructive',
+          onPress: async () => {
+            const done = await run(
+              () => api.block(eventIdForModeration, post.id),
+              t('wall.blocked_toast', { name: post.display_name }),
+            );
+            if (done) setStoppedPostIds((ids) => new Set(ids).add(post.id));
+          },
+        },
+      ]);
     }
   }
 
@@ -140,8 +184,18 @@ export default function WallScreen({ api = wallApi }: { api?: WallApi }) {
     return (
       <Screen style={{ justifyContent: 'center' }}>
         <Stack.Screen options={{ title: t('wall.title') }} />
-        <ActivityIndicator />
-        <ErrorText>{error}</ErrorText>
+        {loadFailed ? (
+          <View testID="wall-load-error" style={{ gap: 12 }}>
+            <Body center>{loadFailed.message}</Body>
+            <Button testID="wall-retry" variant="secondary" title={t('common.retry')} onPress={() => void retry()} />
+            {loadFailed.unauthorized ? (
+              // Ends this device's stale session; the router then shows the sign-in screen.
+              <Button testID="wall-sign-in" title={t('auth.sign_in_again')} onPress={() => void signOut()} />
+            ) : null}
+          </View>
+        ) : (
+          <Spinner />
+        )}
       </Screen>
     );
   }
@@ -159,12 +213,18 @@ export default function WallScreen({ api = wallApi }: { api?: WallApi }) {
   return (
     <>
       <Stack.Screen options={{ title: params.title ? `${t('wall.title')} · ${params.title}` : t('wall.title') }} />
-      <ScrollView
+      <KeyboardScroll
         testID="wall-screen"
-        contentInsetAdjustmentBehavior="automatic"
-        style={{ backgroundColor: c.bg }}
         contentContainerStyle={{ padding: 20, gap: 12, paddingBottom: 60 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} />}
+        refreshControl={
+          <RefreshControl
+            tintColor={c.accent}
+            colors={[c.accent]}
+            progressBackgroundColor={c.surface}
+            refreshing={refreshing}
+            onRefresh={() => void refresh()}
+          />
+        }
       >
         {ok.moderator && !ok.wall_enabled ? <Body muted>{t('wall.off_host')}</Body> : null}
         {ok.can_post === 'ok' ? (
@@ -184,7 +244,14 @@ export default function WallScreen({ api = wallApi }: { api?: WallApi }) {
 
         {posts.length === 0 ? <Body muted>{t('wall.empty')}</Body> : null}
         {posts.map((p) => (
-          <WallPostItem key={p.id} post={p} moderator={ok.moderator} onAction={onAction} onOpenPhoto={setPhoto} />
+          <WallPostItem
+            key={p.id}
+            post={p}
+            moderator={ok.moderator}
+            hideBlock={stoppedPostIds.has(p.id) || (ok.blocks ?? []).some((b) => b.display_name === p.display_name)}
+            onAction={onAction}
+            onOpenPhoto={setPhoto}
+          />
         ))}
         {hasMore ? <Button variant="secondary" title={t('wall.load_more')} onPress={() => void loadMore()} /> : null}
 
@@ -198,14 +265,22 @@ export default function WallScreen({ api = wallApi }: { api?: WallApi }) {
             {ok.blocks.map((b) => (
               <View key={b.id} testID="wall-blocked" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Body>{b.display_name}</Body>
-                <Pressable testID={`wall-unblock-${b.id}`} onPress={() => void run(() => api.unblock(params.eventId!, b.id))} hitSlop={8}>
+                <Pressable
+                  testID={`wall-unblock-${b.id}`}
+                  onPress={() => {
+                    setStoppedPostIds(new Set());
+                    void run(() => api.unblock(params.eventId!, b.id));
+                  }}
+                  hitSlop={8}
+                >
                   <Text style={{ color: c.accent, fontWeight: '600' }}>{t('wall.unblock')}</Text>
                 </Pressable>
               </View>
             ))}
           </Card>
         ) : null}
-      </ScrollView>
+      </KeyboardScroll>
+      <Toast message={toast} onHide={hideToast} topOffset={64} />
 
       <Modal visible={!!photo} transparent animationType="fade" onRequestClose={() => setPhoto(null)}>
         <Pressable testID="wall-lightbox" onPress={() => setPhoto(null)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center' }}>

@@ -29,10 +29,13 @@ jest.mock('@/lib/auth', () => ({ useAuth: () => ({ session: { user: { id: mockUs
 
 let mockEvent: Record<string, unknown> | null;
 let mockLinks: unknown[] = [];
+let mockRsvps: unknown[] = [];
 jest.mock('@/lib/supabase', () => {
   const builder = (table: string) => {
     const result = () =>
-      table === 'events' ? { data: mockEvent, error: null } : { data: table === 'co_host_invites' ? mockLinks : [], error: null };
+      table === 'events'
+        ? { data: mockEvent, error: null }
+        : { data: table === 'co_host_invites' ? mockLinks : table === 'rsvps' ? mockRsvps : [], error: null };
     const b: Record<string, unknown> = {};
     for (const m of ['select', 'eq', 'order', 'update', 'is', 'gt']) b[m] = () => b;
     b.single = async () => result();
@@ -79,6 +82,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockEvent = { ...baseEvent };
   mockLinks = [];
+  mockRsvps = [];
   mockUserId = 'owner';
   mockRpc();
 });
@@ -151,5 +155,37 @@ describe('event detail for a co-host', () => {
     await waitFor(() => expect(alert).toHaveBeenCalledWith("You're no longer a co-host of this event.", undefined, expect.any(Array)));
     alert.mock.calls[0]![2]![0]!.onPress!();
     expect(router.back).toHaveBeenCalled();
+  });
+});
+
+describe('event detail layout', () => {
+  const rsvp = (id: string, name: string, status: string, plus_ones = 0) => ({
+    id,
+    event_id: 'e1',
+    display_name: name,
+    status,
+    plus_ones,
+    waitlisted_at: status === 'waitlisted' ? inDays(-1) : null,
+    created_at: inDays(-2),
+  });
+
+  it('shows a compact going/maybe/waitlist summary near the top', async () => {
+    mockEvent = { ...baseEvent, capacity: 3 };
+    mockRsvps = [rsvp('1', 'Anna', 'going', 2), rsvp('2', 'Bo', 'maybe'), rsvp('3', 'Cai', 'waitlisted', 1)];
+    await render(<EventDetail />);
+    expect(await screen.findByTestId('guest-summary')).toHaveTextContent(/^3 \/ 3 going · 1 maybe · 2 waitlisted/);
+  });
+
+  it('asks clearly before removing a guest and mentions the waitlist', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockEvent = { ...baseEvent, capacity: 1 };
+    mockRsvps = [rsvp('1', 'Anna', 'going'), rsvp('2', 'Bo', 'waitlisted')];
+    await render(<EventDetail />);
+    await fireEvent.press(await screen.findByTestId('remove-Anna'));
+    expect(alert).toHaveBeenCalledWith(
+      'Remove Anna?',
+      'Anna will be taken off the guest list. A waitlisted guest will be promoted to the free spot.',
+      expect.any(Array),
+    );
   });
 });

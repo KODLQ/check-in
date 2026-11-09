@@ -105,4 +105,9 @@ describe('sign-out', () => {
     expect(rpc).not.toHaveBeenCalled();
     expect(authSignOut).toHaveBeenCalled();
   });
+
+  it('signs out only this device by default (other devices stay signed in)', async () => {
+    await signOut();
+    expect(authSignOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
 });

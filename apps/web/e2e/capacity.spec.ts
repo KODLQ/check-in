@@ -69,7 +69,7 @@ test.describe('/api/rsvp capacity errors', () => {
 test('RSVP with plus-ones: stepper up to the maximum, "Going +2" and heads in the count', async ({ page }) => {
   const token = await createEvent({ title: 'Plus party', allowPlusOnes: true, maxPlusOnes: 2 });
   await page.goto(`/i/${token}`);
-  const more = page.getByRole('button', { name: 'One friend more' });
+  const more = page.getByRole('button', { name: 'One plus-one more' });
   await more.click();
   await more.click();
   await expect(page.getByTestId('plus-ones-value')).toHaveText('2');

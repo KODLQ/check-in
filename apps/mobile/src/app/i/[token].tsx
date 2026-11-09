@@ -3,6 +3,7 @@ import {
   formatTimeRange,
   hostedByKey,
   inviteUrl,
+  mapsUrl,
   type InvitePoll,
   type MyVotes,
   type RsvpStatus,
@@ -12,16 +13,18 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView } from 'react-native';
+import { Linking, Pressable, Text } from 'react-native';
 
 import { AnnouncementList, AnnouncementsCard, type AnnouncementItem } from '@/components/announcements';
 import { Cover } from '@/components/cover';
+import { KeyboardScroll } from '@/components/keyboard-scroll';
 import { PollVoting } from '@/components/poll-voting';
 import { CountsLine, RsvpControls, rsvpErrorText, type RsvpInvite } from '@/components/rsvp-controls';
-import { Body, Button, ErrorText, Screen, Title, useColors } from '@/components/ui';
+import { Body, Button, ErrorText, Screen, Spinner, Title, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { INVITE_BASE_URL } from '@/lib/config';
 import { locale } from '@/lib/i18n';
+import { managedEventIdForToken } from '@/lib/invite-access';
 import { errorKey } from '@/lib/events';
 import { maybeAskForPush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
@@ -36,6 +39,8 @@ interface Invite extends RsvpInvite {
     ends_at?: string | null;
     time_zone: string;
     location_text: string;
+    latitude?: number | null;
+    longitude?: number | null;
     cover_path?: string | null;
     theme?: string;
   };
@@ -57,10 +62,19 @@ export default function InviteInApp() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const userId = session?.user.id;
   const load = useCallback(async () => {
-    const { data } = await supabase.rpc('get_invite', { p_token: token });
+    const [{ data }, managedId] = await Promise.all([
+      supabase.rpc('get_invite', { p_token: token }),
+      userId ? managedEventIdForToken(token) : Promise.resolve(null),
+    ]);
+    // Hosts and co-hosts opening their own invite link get the host view, not the guest RSVP form.
+    if (managedId) {
+      router.replace(`/events/${managedId}`);
+      return;
+    }
     setInvite((data as unknown as Invite) ?? { state: 'not_found' });
-  }, [token]);
+  }, [token, userId]);
 
   useEffect(() => {
     void load();
@@ -69,7 +83,7 @@ export default function InviteInApp() {
   if (!invite) {
     return (
       <Screen style={{ justifyContent: 'center' }}>
-        <ActivityIndicator />
+        <Spinner />
       </Screen>
     );
   }
@@ -136,7 +150,7 @@ export default function InviteInApp() {
   }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ backgroundColor: c.bg }} contentContainerStyle={{ padding: 20, gap: 14 }}>
+    <KeyboardScroll contentContainerStyle={{ padding: 20, gap: 14, paddingBottom: 60 }}>
       <Cover coverPath={e.cover_path} theme={e.theme} height={200} />
       <Title>{e.title}</Title>
       <Body muted>{t(`invite.${hostedByKey(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name))}`, {
@@ -147,7 +161,13 @@ export default function InviteInApp() {
           ? formatTimeRange(new Date(e.starts_at), e.ends_at ? new Date(e.ends_at) : null, locale, e.time_zone)
           : t('polls.date_tbd')}
       </Body>
-      <Body>📍 {e.location_text}</Body>
+      <Pressable
+        testID="invite-location"
+        accessibilityRole="link"
+        onPress={() => Linking.openURL(mapsUrl({ latitude: e.latitude, longitude: e.longitude, query: e.location_text }))}
+      >
+        <Text style={{ color: c.accent, fontSize: 16 }}>📍 {e.location_text}</Text>
+      </Pressable>
       {e.description ? <Body muted>{e.description}</Body> : null}
       {invite.state === 'past' ? <Body muted>{t('invite.past_body')}</Body> : null}
       {invite.announcements?.length ? (
@@ -193,6 +213,6 @@ export default function InviteInApp() {
         />
       ) : null}
       {!session ? <Button variant="ghost" title={t('invite.get_app')} onPress={() => router.replace('/sign-in')} /> : null}
-    </ScrollView>
+    </KeyboardScroll>
   );
 }

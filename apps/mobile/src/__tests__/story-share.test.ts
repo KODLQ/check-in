@@ -95,10 +95,16 @@ describe('available destinations (installed × configured)', () => {
     expect(await availableDestinations(config)).toEqual(expected);
   });
 
-  it('Android uses package visibility', async () => {
+  it('Android uses package visibility for Instagram', async () => {
     Platform.OS = 'android';
-    mockIsPackageInstalled.mockImplementation(async (p: string) => ({ isInstalled: p === 'com.snapchat.android' }));
-    expect(await availableDestinations(both)).toEqual(['snapchat', 'sheet']);
+    mockIsPackageInstalled.mockImplementation(async (p: string) => ({ isInstalled: p === 'com.instagram.android' }));
+    expect(await availableDestinations(both)).toEqual(['instagram', 'sheet']);
+  });
+
+  it('Android never offers Snapchat while Snap Kit is unlinked there', async () => {
+    Platform.OS = 'android';
+    mockIsPackageInstalled.mockResolvedValue({ isInstalled: true });
+    expect(await availableDestinations(both)).toEqual(['instagram', 'sheet']);
   });
 
   it('a failing install check just hides the destination', async () => {

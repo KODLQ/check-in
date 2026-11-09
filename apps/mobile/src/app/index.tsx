@@ -12,7 +12,6 @@ import { Link, router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   SectionList,
@@ -21,7 +20,7 @@ import {
 } from 'react-native';
 
 import { Cover } from '@/components/cover';
-import { Body, Button, Card, useColors } from '@/components/ui';
+import { Body, Button, Card, Spinner, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { locale } from '@/lib/i18n';
 import { consumePendingCoHostInvite } from '@/lib/pending-co-host';
@@ -42,10 +41,11 @@ const PLAN_CARD_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function PlanYourOwnCard({ onDismiss }: { onDismiss: () => void }) {
   const { t } = useTranslation();
+  const c = useColors();
   return (
     <View testID="plan-own-card" style={{ marginBottom: 14 }}>
       <Card>
-        <Text style={{ fontSize: 18, fontWeight: '800' }}>{t('events.plan_own_title')}</Text>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: c.text }}>{t('events.plan_own_title')}</Text>
         <Body muted>{t('events.plan_own_body')}</Body>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <View style={{ flex: 1 }}>
@@ -229,8 +229,8 @@ export default function Events() {
         options={{
           headerRight: () => (
             <Link href="/settings" asChild>
-              <Pressable hitSlop={12}>
-                <Text style={{ fontSize: 22 }}>⚙︎</Text>
+              <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel={t('profile.settings')} testID="open-settings">
+                <Text style={{ fontSize: 22, color: c.text }}>⚙︎</Text>
               </Pressable>
             </Link>
           ),
@@ -244,6 +244,9 @@ export default function Events() {
         keyExtractor={(i) => `${i.kind}:${i.id}`}
         refreshControl={
           <RefreshControl
+            tintColor={c.accent}
+            colors={[c.accent]}
+            progressBackgroundColor={c.surface}
             refreshing={refreshing}
             onRefresh={async () => {
               setRefreshing(true);
@@ -264,18 +267,17 @@ export default function Events() {
         )}
         ListEmptyComponent={
           hosted ? (
-            <View testID="events-empty" style={{ paddingTop: 40, gap: 16 }}>
+            // One create button only: the floating "New event" below. Invites land here too.
+            <View testID="events-empty" style={{ paddingTop: 40, gap: 8 }}>
               <Body muted center>
                 {t('events.empty')}
               </Body>
-              <Button
-                testID="empty-plan-own"
-                title={t('events.plan_own_title')}
-                onPress={() => router.push('/events/new')}
-              />
+              <Body muted center>
+                {t('events.empty_invites')}
+              </Body>
             </View>
           ) : (
-            <ActivityIndicator style={{ paddingTop: 40 }} />
+            <Spinner style={{ paddingTop: 40 }} />
           )
         }
         renderItem={renderItem}

@@ -31,7 +31,36 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "se.checkin.app"
+      "package": "se.checkin.app",
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "checkin.example",
+              "pathPrefix": "/i/"
+            },
+            {
+              "scheme": "https",
+              "host": "checkin.example",
+              "pathPrefix": "/c/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "output": "static"
@@ -53,7 +82,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Choose a cover image for your event."
+          "photosPermission": "Choose a cover image for your event.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       [
@@ -62,7 +93,9 @@
           "color": "#FF4D6D"
         }
       ],
-      "./plugins/with-story-share"
+      "./plugins/with-story-share",
+      "./plugins/with-app-links",
+      "./plugins/with-android-accent"
     ],
     "experiments": {
       "typedRoutes": true,

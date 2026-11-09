@@ -1,7 +1,7 @@
 import { coHostInviteUrl, formatEventTime } from '@check-in/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, Share, Text, View } from 'react-native';
+import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { Body, Button, Card, ErrorText, Label, useColors } from '@/components/ui';
 import { INVITE_BASE_URL } from '@/lib/config';
@@ -127,12 +127,14 @@ export function HostsCard({
         <View
           key={h.user_id}
           testID={`host-${h.role}-${h.display_name ?? ''}`}
-          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}
+          style={styles.row}
         >
-          <Body>
-            {h.user_id === userId ? t('co_hosts.you', { name: h.display_name ?? '' }) : (h.display_name ?? '')}
-          </Body>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Body>
+              {h.user_id === userId ? t('co_hosts.you', { name: h.display_name ?? '' }) : (h.display_name ?? '')}
+            </Body>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <Text style={{ color: c.muted }}>{h.role === 'owner' ? t('co_hosts.owner') : t('co_hosts.co_host')}</Text>
             {isOwner && h.role === 'co_host' ? (
               <Pressable
@@ -152,12 +154,20 @@ export function HostsCard({
         <View
           key={l.token}
           testID="pending-co-host-link"
-          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}
+          style={styles.row}
         >
-          <Body muted>
-            {t('co_hosts.pending', { when: formatEventTime(new Date(l.expires_at), locale, timeZone) })}
-          </Body>
-          <Pressable hitSlop={8} accessibilityRole="button" onPress={() => revoke(l)} testID="revoke-co-host-link">
+          <View style={{ flex: 1 }}>
+            <Body muted>
+              {t('co_hosts.pending', { when: formatEventTime(new Date(l.expires_at), locale, timeZone) })}
+            </Body>
+          </View>
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            onPress={() => revoke(l)}
+            testID="revoke-co-host-link"
+            style={{ flexShrink: 0, paddingVertical: 4 }}
+          >
             <Text style={{ color: c.danger, fontWeight: '600' }}>{t('co_hosts.revoke')}</Text>
           </Pressable>
         </View>
@@ -178,3 +188,7 @@ export function HostsCard({
     </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingVertical: 4 },
+});

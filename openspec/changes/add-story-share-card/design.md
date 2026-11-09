@@ -125,3 +125,6 @@ No database migration. Deploy web first (route is additive), then ship a mobile 
 
 - Facebook App ID for Instagram Stories and Snap Kit client ID (plus Snap app review): who owns the developer accounts. Setup items; the feature ships with the share-sheet fallback until they exist.
 - Final CTA copy in Swedish and English ("RSVP at" / "Svara på") — copy tweak, no design impact.
+
+### Android: Snap Kit not linked (found during Android setup)
+`@snapchat/snap-kit-react-native` 0.4.0's Android project calls `jcenter()`, which Gradle 9 (used by Expo SDK 58) removed, so the Android build fails with it linked. `apps/mobile/react-native.config.js` excludes it from Android autolinking and `availableDestinations` never offers Snapchat on Android; Android "Share to Story" uses Instagram (when configured) or the share sheet. Revisit when Snap ships a Gradle 9-compatible SDK, or vendor a patched copy.

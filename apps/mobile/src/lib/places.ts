@@ -13,19 +13,35 @@ interface PhotonFeature {
     housenumber?: string;
     city?: string;
     district?: string;
+    countrycode?: string;
   };
 }
 
 /** Greater Stockholm. We launch here, so local matches come first. */
-const STOCKHOLM_BBOX = '17.2,58.7,19.6,60.2';
+export const STOCKHOLM_BBOX = '17.2,58.7,19.6,60.2';
+/** Sweden. The fallback never goes worldwide: a far-away match is worse than none. */
+export const SWEDEN_BBOX = '10.5,55.0,24.2,69.1';
 
-async function photon(q: string, extra: string, signal?: AbortSignal): Promise<PhotonFeature[]> {
-  const res = await fetch(
-    `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=en${extra}`,
-    { signal },
-  );
+/** Photon only knows default/de/en/fr; `default` gives local (Swedish) names. */
+export function photonLang(locale: string): string {
+  return locale === 'en' ? 'en' : 'default';
+}
+
+export function photonUrl(q: string, bbox: string, locale: string): string {
+  return `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=${photonLang(locale)}&bbox=${bbox}`;
+}
+
+async function photon(
+  q: string,
+  bbox: string,
+  locale: string,
+  signal?: AbortSignal,
+): Promise<PhotonFeature[]> {
+  const res = await fetch(photonUrl(q, bbox, locale), { signal });
   if (!res.ok) return [];
-  return ((await res.json()) as { features: PhotonFeature[] }).features;
+  const { features } = (await res.json()) as { features: PhotonFeature[] };
+  // The Sweden box also covers bits of Norway, Finland and Denmark.
+  return features.filter((f) => !f.properties.countrycode || f.properties.countrycode === 'SE');
 }
 
 export function toPlace(f: PhotonFeature): Place {
@@ -43,19 +59,23 @@ export function toPlace(f: PhotonFeature): Place {
 
 /**
  * Place search via Photon (OpenStreetMap, no API key). Searches Stockholm first and
- * falls back to everywhere. Fair-use public endpoint: fine for the MVP, swap for a
+ * falls back to the rest of Sweden. Fair-use public endpoint: fine for the MVP, swap for a
  * paid geocoder at scale.
  */
-export async function searchPlaces(query: string, signal?: AbortSignal): Promise<Place[]> {
+export async function searchPlaces(
+  query: string,
+  locale: string,
+  signal?: AbortSignal,
+): Promise<Place[]> {
   const q = query.trim();
   if (q.length < 3) return [];
-  // OSM often lacks house numbers, so try: exact in Stockholm, street in Stockholm, anywhere.
+  // OSM often lacks house numbers, so try: exact in Stockholm, street in Stockholm, Sweden.
   const withoutNumber = q.replace(/\s*\d+\s*[a-zA-Z]?\s*$/, '').trim();
-  let features = await photon(q, `&bbox=${STOCKHOLM_BBOX}`, signal);
+  let features = await photon(q, STOCKHOLM_BBOX, locale, signal);
   if (features.length === 0 && withoutNumber && withoutNumber !== q) {
-    features = await photon(withoutNumber, `&bbox=${STOCKHOLM_BBOX}`, signal);
+    features = await photon(withoutNumber, STOCKHOLM_BBOX, locale, signal);
   }
-  if (features.length === 0) features = await photon(q, '&lat=59.3293&lon=18.0686', signal);
+  if (features.length === 0) features = await photon(q, SWEDEN_BBOX, locale, signal);
 
   const seen = new Set<string>();
   const places: Place[] = [];

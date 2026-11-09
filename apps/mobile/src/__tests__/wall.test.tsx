@@ -2,7 +2,7 @@ import '@/lib/i18n';
 
 import type { WallFeed, WallPost } from '@check-in/shared';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { ActionSheetIOS, Alert } from 'react-native';
 
 import WallScreen from '@/app/wall';
 import MyInviteScreen from '@/app/invites/[eventId]';
@@ -24,6 +24,7 @@ jest.mock('expo-router', () => {
   };
 });
 jest.mock('expo-constants', () => ({ expoConfig: {} }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('expo-image', () => ({ Image: () => null }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
 jest.mock('@/components/cover', () => ({ Cover: () => null }));
@@ -166,23 +167,68 @@ describe('wall screen', () => {
     expect(api.feed).toHaveBeenCalledWith({ eventId: 'ev-1' });
   });
 
-  it('a host deletes all posts by a poster after confirming, then reloads', async () => {
+  /** Picks `label` in the post's "…" action sheet. */
+  function chooseInSheet(label: string) {
+    return jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation((opts, cb) => cb(opts.options.indexOf(label)));
+  }
+
+  it('moderation choices live in one "…" sheet per post, not as inline links', async () => {
     const api = fakeApi(feed({ moderator: true, posts: [post({ can_block: true })] }));
+    const sheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation((_o, cb) => cb(3));
+    await render(<WallScreen api={api} />);
+    expect(screen.queryByText('Delete post')).toBeNull();
+    await fireEvent.press(await screen.findByTestId('wall-post-menu'));
+    expect(sheet.mock.calls[0]![0]).toMatchObject({
+      title: 'Gina',
+      options: ['Delete post', 'Delete all posts by Gina', 'Stop Gina from posting', 'Cancel'],
+      cancelButtonIndex: 3,
+      destructiveButtonIndex: [0, 1],
+    });
+    expect(api.deletePost).not.toHaveBeenCalled();
+    expect(api.block).not.toHaveBeenCalled();
+  });
+
+  it('guests without actions get no menu', async () => {
+    await render(<WallScreen api={fakeApi(feed())} />);
+    await screen.findByTestId('wall-body');
+    expect(screen.queryByTestId('wall-post-menu')).toBeNull();
+  });
+
+  it('a host deletes all posts by a poster after confirming, then reloads and confirms with a toast', async () => {
+    const api = fakeApi(feed({ moderator: true, posts: [post({ can_block: true })] }));
+    chooseInSheet('Delete all posts by Gina');
     jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => void buttons?.find((b) => b.style === 'destructive')?.onPress?.());
     await render(<WallScreen api={api} />);
-    await fireEvent.press(await screen.findByTestId('wall-action-delete_all_by'));
+    await fireEvent.press(await screen.findByTestId('wall-post-menu'));
     await waitFor(() => expect(api.deletePost).toHaveBeenCalledWith({ eventId: 'ev-1' }, 'p1', true));
+    expect(await screen.findByTestId('toast')).toHaveTextContent('Posts deleted');
     expect(api.feed).toHaveBeenCalledTimes(2);
   });
 
-  it('a host stops and then allows a poster', async () => {
+  it('stopping a poster asks first and does nothing when cancelled', async () => {
+    const api = fakeApi(feed({ moderator: true, posts: [post({ can_block: true })] }));
+    chooseInSheet('Stop Gina from posting');
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => void buttons?.find((b) => b.style === 'cancel')?.onPress?.());
+    await render(<WallScreen api={api} />);
+    await fireEvent.press(await screen.findByTestId('wall-post-menu'));
+    expect(alert).toHaveBeenCalledWith('Stop Gina from posting?', expect.any(String), expect.any(Array));
+    expect(api.block).not.toHaveBeenCalled();
+  });
+
+  it('a host stops and then allows a poster; the stop option is gone while stopped', async () => {
     let blocked = false;
     const api = fakeApi(() => feed({ moderator: true, posts: [post({ can_block: true })], blocks: blocked ? [{ id: 'b1', display_name: 'Gina' }] : [] }));
     api.block.mockImplementation(async () => void (blocked = true));
     api.unblock.mockImplementation(async () => void (blocked = false));
+    const sheet = chooseInSheet('Stop Gina from posting');
+    jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => void buttons?.find((b) => b.style === 'destructive')?.onPress?.());
     await render(<WallScreen api={api} />);
-    await fireEvent.press(await screen.findByTestId('wall-action-block'));
+    await fireEvent.press(await screen.findByTestId('wall-post-menu'));
     expect(await screen.findByTestId('wall-blocked')).toHaveTextContent(/Gina/);
+    expect(screen.getByTestId('toast')).toHaveTextContent('Gina can no longer post');
+    sheet.mockClear();
+    await fireEvent.press(screen.getByTestId('wall-post-menu'));
+    expect(sheet.mock.calls[0]![0].options).not.toContain('Stop Gina from posting');
     await fireEvent.press(screen.getByTestId('wall-unblock-b1'));
     await waitFor(() => expect(screen.queryByTestId('wall-blocked')).toBeNull());
     expect(api.block).toHaveBeenCalledWith('ev-1', 'p1');
@@ -205,6 +251,16 @@ describe('wall screen', () => {
     await waitFor(() => expect(api.feed.mock.calls.length).toBe(calls + 1), { timeout: 3000 });
     await new Promise((r) => setTimeout(r, 1200));
     expect(api.feed.mock.calls.length).toBe(calls + 1);
+  });
+
+  it('an expired session hides the spinner and offers Retry and Sign in', async () => {
+    const api = fakeApi(feed());
+    api.feed.mockRejectedValueOnce(new WallApiError('unauthorized'));
+    await render(<WallScreen api={api} />);
+    expect(await screen.findByText('Sign in again.')).toBeTruthy();
+    expect(screen.getByTestId('wall-sign-in')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('wall-retry'));
+    expect(await screen.findByTestId('wall-body')).toBeTruthy();
   });
 
   it('guests do not subscribe to Realtime', async () => {

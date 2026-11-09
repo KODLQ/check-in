@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual('react');
   return {
-    router: { push: jest.fn(), back: jest.fn() },
+    router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() },
     useLocalSearchParams: () => ({ eventId: 'ev-1' }),
     useFocusEffect: (cb: () => void) => useEffect(cb, [cb]),
   };
@@ -41,6 +41,15 @@ const detail = (state: string, status = 'maybe') => ({
 beforeEach(() => jest.clearAllMocks());
 
 describe('my invite screen', () => {
+  it('sends the host or a co-host to the host view instead of the guest view', async () => {
+    (supabase.from as jest.Mock).mockReturnValueOnce({
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'ev-1' }, error: null }) }) }),
+    });
+    await render(<MyInviteScreen />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/events/ev-1'));
+    expect(rpc).not.toHaveBeenCalledWith('get_my_invite', expect.anything());
+  });
+
   it('shows the own answer and changes it with set_my_rsvp', async () => {
     let status = 'maybe';
     rpc.mockImplementation(async (fn: string, args: { p_status?: string }) => {

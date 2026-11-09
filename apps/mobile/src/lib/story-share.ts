@@ -63,7 +63,8 @@ export async function availableDestinations(
 ): Promise<StoryDestination[]> {
   const [instagram, snapchat] = await Promise.all([
     config.facebookAppId ? isInstalled('instagram-stories://share', 'com.instagram.android') : false,
-    config.snapClientId ? isInstalled('snapchat://', 'com.snapchat.android') : false,
+    // Snap Kit isn't linked on Android (its Gradle build needs jcenter(); see react-native.config.js).
+    config.snapClientId && Platform.OS !== 'android' ? isInstalled('snapchat://', 'com.snapchat.android') : false,
   ]);
   const out: StoryDestination[] = [];
   if (instagram) out.push('instagram');

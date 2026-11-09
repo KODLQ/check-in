@@ -1,6 +1,6 @@
 import type { RsvpState, RsvpStatus } from '@check-in/shared';
 import type { TFunction } from 'i18next';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
@@ -8,6 +8,9 @@ import { errorKey } from '@/lib/events';
 import { Body, Button, Stepper, useColors } from './ui';
 
 const STATUSES: RsvpStatus[] = ['going', 'maybe', 'declined'];
+
+/** Stepper changes of a guest who is already going are saved this long after the last tap. */
+export const PLUS_ONES_SAVE_DELAY_MS = 800;
 
 /** The parts of an invite payload (get_invite / get_my_invite) the RSVP controls use. */
 export interface RsvpInvite {
@@ -61,10 +64,47 @@ export function RsvpControls({
   const wantsToGo = my?.status === 'going' || my?.status === 'waitlisted';
   const allow = !!invite.event?.allow_plus_ones;
   const max = invite.event?.max_plus_ones ?? 1;
-  const [plus, setPlus] = useState(wantsToGo ? (my?.plus_ones ?? 0) : 0);
+  const saved = wantsToGo ? (my?.plus_ones ?? 0) : 0;
+  const [plus, setPlus] = useState(saved);
+  // 'saving' from the debounced save until the parent reloads; 'saved' once the new count is back.
+  const [saveState, setSaveState] = useState<'idle' | 'pending' | 'saving' | 'saved'>('idle');
+  const respond = useRef(onRespond);
+  respond.current = onRespond;
   useEffect(() => {
     if (wantsToGo) setPlus(my?.plus_ones ?? 0);
   }, [wantsToGo, my?.plus_ones]);
+
+  // Already going (or waitlisted): a stepper change is an RSVP change, so save it (debounced) instead
+  // of waiting for another tap on Going.
+  useEffect(() => {
+    if (!wantsToGo || saveState !== 'pending') return;
+    const timer = setTimeout(() => {
+      setSaveState('saving');
+      respond.current('going', plus);
+    }, PLUS_ONES_SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [plus, wantsToGo, saveState]);
+
+  // Saved once the reloaded answer has the new count. If the parent finished (busy went back to
+  // false) without it, the change was rejected (the parent shows the error): show what is saved.
+  const sawBusy = useRef(false);
+  useEffect(() => {
+    if (saveState !== 'saving') return;
+    if (busy) sawBusy.current = true;
+    if (saved === plus) {
+      sawBusy.current = false;
+      setSaveState('saved');
+    } else if (!busy && sawBusy.current) {
+      sawBusy.current = false;
+      setSaveState('idle');
+      setPlus(saved);
+    }
+  }, [saveState, busy, saved, plus]);
+  useEffect(() => {
+    if (saveState !== 'saved') return;
+    const timer = setTimeout(() => setSaveState('idle'), 3000);
+    return () => clearTimeout(timer);
+  }, [saveState]);
   // The stepper never offers more than the current maximum, but keeps a higher count the guest already has.
   const stepperMax = Math.max(max, wantsToGo ? (my?.plus_ones ?? 0) : 0);
 
@@ -84,14 +124,24 @@ export function RsvpControls({
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <View style={{ flex: 1 }}>
             <Body>{t('rsvp.plus_ones_label')}</Body>
-            <Text style={{ color: c.muted, fontSize: 13 }}>{t('rsvp.plus_ones_hint', { max })}</Text>
+            <Text testID="plus-ones-status" style={{ color: c.muted, fontSize: 13 }}>
+              {saveState === 'pending' || saveState === 'saving'
+                ? t('rsvp.plus_ones_saving')
+                : saveState === 'saved'
+                  ? `${t('rsvp.plus_ones_saved')} ✓`
+                  : t('rsvp.plus_ones_hint', { max })}
+            </Text>
           </View>
           <Stepper
             testID="plus-ones"
             value={plus}
             min={0}
             max={stepperMax}
-            onChange={setPlus}
+            onChange={(n) => {
+              setPlus(n);
+              // Not answered Going yet: the count is sent with the Going tap.
+              setSaveState(wantsToGo ? (n === saved ? 'idle' : 'pending') : 'idle');
+            }}
             disabled={busy}
             decreaseLabel={t('rsvp.plus_ones_decrease')}
             increaseLabel={t('rsvp.plus_ones_increase')}
@@ -110,7 +160,10 @@ export function RsvpControls({
                   : t(`rsvp.${s}`)
               }
               disabled={busy}
-              onPress={() => onRespond(s, s === 'going' && allow ? plus : undefined)}
+              onPress={() => {
+                setSaveState('idle');
+                onRespond(s, s === 'going' && allow ? plus : undefined);
+              }}
             />
           </View>
         ))}

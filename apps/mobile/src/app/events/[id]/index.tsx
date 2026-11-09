@@ -1,18 +1,29 @@
-import { formatOption, formatTimeRange, hasEventEnded, inviteUrl, mapsUrl, pickOutcome, tally } from '@check-in/shared';
+import {
+  formatOption,
+  formatTimeRange,
+  hasEventEnded,
+  headCount,
+  inviteUrl,
+  mapsUrl,
+  pickOutcome,
+  tally,
+} from '@check-in/shared';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Share, Text, View } from 'react-native';
+import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 
 import { AnnouncementComposer, AnnouncementList, AnnouncementsCard, type AnnouncementItem } from '@/components/announcements';
 import { Cover } from '@/components/cover';
 import { GuestList, promoteGuest, type GuestRow } from '@/components/guest-list';
 import { HostsCard } from '@/components/hosts-card';
+import { KeyboardScroll } from '@/components/keyboard-scroll';
 import { PollResults } from '@/components/poll-results';
 import { StoryShareButton } from '@/components/story-share-button';
 import { Toast } from '@/components/toast';
-import { Body, Button, Card, Label, Screen, Title, useColors } from '@/components/ui';
+import { Body, Button, Card, HeaderButton, Label, Screen, Spinner, Title, Toggle, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { INVITE_BASE_URL } from '@/lib/config';
 import { errorKey, fetchActiveInvite } from '@/lib/events';
@@ -46,6 +57,10 @@ export default function EventDetail() {
   // Date poll (add-date-polls): only while the event's date is pending.
   const [poll, setPoll] = useState<HostPoll | null>(null);
   const hideToast = useCallback(() => setToast(null), []);
+  // "Your event is ready" banner: until dismissed, the first share, or leaving the screen.
+  const [showCreated, setShowCreated] = useState(!!created);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const guestsY = useRef(0);
 
   const loadAnnouncements = useCallback(async () => {
     const { data } = await supabase
@@ -67,8 +82,10 @@ export default function EventDetail() {
       if (!error) setGone(true);
       return;
     }
+    // Event and invite link appear together, so the share buttons don't pop in and shift the page.
+    const nextToken = await fetchActiveInvite(id);
+    setToken(nextToken);
     setEvent(data);
-    setToken(await fetchActiveInvite(id));
     await Promise.all([
       loadRsvps(),
       loadAnnouncements(),
@@ -85,13 +102,16 @@ export default function EventDetail() {
     useCallback(() => {
       void load();
       const timer = setInterval(() => void checkAccess(), ACCESS_CHECK_MS);
-      return () => clearInterval(timer);
+      return () => {
+        clearInterval(timer);
+        setShowCreated(false);
+      };
     }, [load, checkAccess]),
   );
 
   useEffect(() => {
     if (!gone) return;
-    Alert.alert(t('co_hosts.no_longer'), undefined, [{ text: 'OK', onPress: goBack }]);
+    Alert.alert(t('co_hosts.no_longer'), undefined, [{ text: t('common.ok'), onPress: goBack }]);
   }, [gone, t]);
 
   // Live guest list (Realtime respects RLS, so only the host receives these rows).
@@ -141,7 +161,7 @@ export default function EventDetail() {
   if (!event) {
     return (
       <Screen style={{ justifyContent: 'center' }}>
-        <ActivityIndicator />
+        <Spinner />
       </Screen>
     );
   }
@@ -158,6 +178,7 @@ export default function EventDetail() {
 
   async function share() {
     if (!link || !event) return;
+    setShowCreated(false);
     const shareWhen = pending ? t('polls.date_tbd_vote') : when;
     await Share.share({ message: `${t('events.share_message', { title: event.title, when: shareWhen })}\n${link}`, url: link });
   }
@@ -196,6 +217,7 @@ export default function EventDetail() {
 
   async function copy() {
     if (!link) return;
+    setShowCreated(false);
     await Clipboard.setStringAsync(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -276,7 +298,12 @@ export default function EventDetail() {
   }
 
   function removeGuest(r: GuestRow) {
-    Alert.alert(r.display_name, undefined, [
+    // Freeing a "going" spot on a full event moves the first waitlisted guest in.
+    const promotes = r.status === 'going' && rsvps.some((x) => x.status === 'waitlisted');
+    Alert.alert(
+      t('rsvp.remove_guest_title', { name: r.display_name }),
+      t(promotes ? 'rsvp.remove_guest_body_waitlist' : 'rsvp.remove_guest_body', { name: r.display_name }),
+      [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('rsvp.remove_guest'),
@@ -288,7 +315,23 @@ export default function EventDetail() {
           await loadRsvps();
         },
       },
-    ]);
+      ],
+    );
+  }
+
+  const goingHeads = headCount(rsvps);
+  const maybeCount = rsvps.filter((r) => r.status === 'maybe').length;
+  const waitlistHeads = headCount(rsvps, 'waitlisted');
+  const summary = [
+    event.capacity != null
+      ? t('events.going_of_capacity', { count: goingHeads, capacity: event.capacity })
+      : t('events.going_count', { count: goingHeads }),
+    t('events.maybe_count', { count: maybeCount }),
+    ...(waitlistHeads > 0 ? [t('events.waitlist_count', { count: waitlistHeads })] : []),
+  ].join(' · ');
+
+  function scrollToGuests() {
+    scrollRef.current?.scrollTo({ y: Math.max(0, guestsY.current - 12), animated: true });
   }
 
   async function promote(r: GuestRow) {
@@ -309,17 +352,24 @@ export default function EventDetail() {
         options={{
           headerRight: editable
             ? () => (
-                <Pressable hitSlop={12} onPress={() => router.push(`/events/${id}/edit`)}>
-                  <Text style={{ color: c.accent, fontSize: 17, fontWeight: '600' }}>{t('events.edit_event')}</Text>
-                </Pressable>
+                <HeaderButton testID="edit-event" title={t('events.edit_event')} onPress={() => router.push(`/events/${id}/edit`)} />
               )
             : undefined,
         }}
       />
-      <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ backgroundColor: c.bg }} contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 60 }}>
-        {created && editable ? (
-          <Card style={{ backgroundColor: c.accent }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>{t('events.created')}</Text>
+      <KeyboardScroll ref={scrollRef} contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 60 }}>
+        {showCreated && editable ? (
+          <Card style={{ backgroundColor: c.accent, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16, flex: 1 }}>{t('events.created')}</Text>
+            <Pressable
+              testID="dismiss-created"
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+              onPress={() => setShowCreated(false)}
+            >
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>✕</Text>
+            </Pressable>
           </Card>
         ) : null}
 
@@ -328,6 +378,7 @@ export default function EventDetail() {
         {event.cancelled_at ? <Text style={{ color: c.danger, fontWeight: '700' }}>{t('events.cancelled')}</Text> : null}
         <Body>{when}</Body>
         <Pressable
+          accessibilityRole="link"
           onPress={() =>
             Linking.openURL(mapsUrl({ latitude: event.latitude, longitude: event.longitude, query: event.location_text }))
           }
@@ -335,6 +386,28 @@ export default function EventDetail() {
           <Text style={{ color: c.accent, fontSize: 16 }}>📍 {event.location_text}</Text>
         </Pressable>
         {event.description ? <Body muted>{event.description}</Body> : null}
+
+        {/* Compact head count; tapping jumps to the guest list further down. */}
+        {pending ? null : (
+          <Pressable
+            testID="guest-summary"
+            accessibilityRole="button"
+            onPress={scrollToGuests}
+            style={({ pressed }) => ({
+              backgroundColor: c.surface,
+              borderRadius: 12,
+              paddingVertical: 12,
+              paddingHorizontal: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Text style={{ color: c.text, fontSize: 16, fontWeight: '600', flex: 1 }}>{summary}</Text>
+            <Text style={{ color: c.muted, fontSize: 18 }}>›</Text>
+          </Pressable>
+        )}
 
         {editable && link ? (
           <View style={{ gap: 10 }}>
@@ -345,6 +418,19 @@ export default function EventDetail() {
               {link}
             </Text>
           </View>
+        ) : null}
+
+        {/* Date-pending events: the poll is the main thing to manage, right under the share actions. */}
+        {pending && poll ? (
+          <PollResults
+            poll={poll}
+            timeZone={event.time_zone}
+            closesAt={event.poll_closes_at}
+            editable={editable}
+            onPick={confirmPick}
+            onRemoveVoter={removeVoter}
+            onEdit={() => router.push(`/events/${id}/poll`)}
+          />
         ) : null}
 
         {editable || announcements.length > 0 ? (
@@ -364,7 +450,7 @@ export default function EventDetail() {
               <Label>{t('wall.title')}</Label>
               <Body muted>{event.wall_enabled ? t('wall.toggle_hint') : t('wall.off_host')}</Body>
             </View>
-            <Switch testID="wall-toggle" value={event.wall_enabled} onValueChange={(on) => void toggleWall(on)} />
+            <Toggle testID="wall-toggle" value={event.wall_enabled} onValueChange={(on) => void toggleWall(on)} />
           </View>
           <Button
             testID="open-wall"
@@ -374,32 +460,30 @@ export default function EventDetail() {
           />
         </Card>
 
-        {pending && poll ? (
-          <PollResults
-            poll={poll}
-            timeZone={event.time_zone}
-            closesAt={event.poll_closes_at}
-            editable={editable}
-            onPick={confirmPick}
-            onRemoveVoter={removeVoter}
-            onEdit={() => router.push(`/events/${id}/poll`)}
-          />
-        ) : null}
+        <View
+          testID="guests-section"
+          style={{ gap: 16 }}
+          onLayout={(e) => {
+            guestsY.current = e.nativeEvent.layout.y;
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Label>{t('events.show_guest_list')}</Label>
+            </View>
+            <Toggle value={event.guest_list_visible} onValueChange={toggleGuestList} disabled={!editable} />
+          </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Label>{t('events.show_guest_list')}</Label>
-          <Switch value={event.guest_list_visible} onValueChange={toggleGuestList} disabled={!editable} />
+          {pending ? null : (
+            <GuestList
+              rsvps={rsvps}
+              capacity={event.capacity}
+              editable={editable}
+              onRemove={removeGuest}
+              onPromote={(r) => void promote(r)}
+            />
+          )}
         </View>
-
-        {pending ? null : (
-          <GuestList
-            rsvps={rsvps}
-            capacity={event.capacity}
-            editable={editable}
-            onRemove={removeGuest}
-            onPromote={(r) => void promote(r)}
-          />
-        )}
 
         <HostsCard
           eventId={id}
@@ -422,7 +506,7 @@ export default function EventDetail() {
         {!isOwner ? (
           <Button testID="leave-co-host" variant="ghost" title={t('co_hosts.leave')} onPress={confirmLeave} />
         ) : null}
-      </ScrollView>
+      </KeyboardScroll>
       <Toast message={toast} onHide={hideToast} topOffset={64} />
     </>
   );

@@ -4,15 +4,20 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert } from 'react-native';
 
 import { EventForm } from '@/components/event-form';
-import { Screen } from '@/components/ui';
+import { FormHeader } from '@/components/form-header';
+import { Screen, useColors } from '@/components/ui';
 import { errorKey, toEventDetailsRow, toEventRow } from '@/lib/events';
 import { supabase, type EventRow } from '@/lib/supabase';
 import { pickAndUpload } from '@/lib/upload';
+import { useDiscardGuard } from '@/lib/use-discard-guard';
 
 export default function EditEvent() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const c = useColors();
   const [event, setEvent] = useState<EventRow | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const allowLeave = useDiscardGuard(dirty);
 
   useEffect(() => {
     supabase
@@ -30,7 +35,7 @@ export default function EditEvent() {
   if (!event) {
     return (
       <Screen style={{ justifyContent: 'center' }}>
-        <ActivityIndicator />
+        <ActivityIndicator color={c.accent} />
       </Screen>
     );
   }
@@ -43,6 +48,10 @@ export default function EditEvent() {
     <EventForm
       submitLabel={t('common.save')}
       datePending={pending}
+      onDirtyChange={setDirty}
+      renderHeader={({ submit, busy }) => (
+        <FormHeader saveLabel={t('common.save')} onSave={submit} busy={busy} />
+      )}
       // Past start times are only a problem if the host changes them.
       now={() => new Date(Math.min(Date.now(), originalStart.getTime() - 1))}
       initial={{
@@ -67,6 +76,7 @@ export default function EditEvent() {
         const { data, error } = await supabase.from('events').update(row).eq('id', id).select('id');
         if (error) return errorKey(error);
         if (!data?.length) return 'no_access';
+        allowLeave();
         router.back();
       }}
     />

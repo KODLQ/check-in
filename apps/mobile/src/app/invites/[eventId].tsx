@@ -14,6 +14,7 @@ import { answerLine, CountsLine, RsvpControls, rsvpErrorText, type RsvpInvite } 
 import { Body, Button, ErrorText, Screen, Title, useColors } from '@/components/ui';
 import { locale } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
+import { managesEvent } from '@/lib/invite-access';
 import { supabase } from '@/lib/supabase';
 import { wallApi } from '@/lib/wall';
 import { withdrawChoices } from '@/components/wall';
@@ -47,6 +48,11 @@ export default function MyInviteScreen() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
+    // Hosts and co-hosts manage the event instead of answering it.
+    if (await managesEvent(eventId)) {
+      router.replace(`/events/${eventId}`);
+      return;
+    }
     const { data } = await supabase.rpc('get_my_invite', { p_event_id: eventId });
     setInvite((data as unknown as MyInviteDetail | null) ?? { state: 'not_found' });
   }, [eventId]);

@@ -8,6 +8,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Body, Button, ErrorText, Field, useColors } from '@/components/ui';
 import { locale as deviceLocale } from '@/lib/i18n';
+import { showActionSheet } from '@/lib/action-sheet';
 import { pickPhotos, wallErrorKey, type PickedPhoto } from '@/lib/wall';
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -129,28 +130,64 @@ export function WallComposer({
   );
 }
 
+/**
+ * Opens the post's choices in a native sheet (one quiet "…" button per post instead of inline links) and
+ * reports the chosen action. Confirmation happens in the screen.
+ */
+export async function choosePostAction(
+  post: WallPost,
+  actions: WallAction[],
+  t: T,
+): Promise<WallAction['key'] | null> {
+  const index = await showActionSheet(
+    actions.map((a) => ({ label: a.label, destructive: a.destructive })),
+    { title: post.display_name, cancelLabel: t('common.cancel') },
+  );
+  return index === null ? null : (actions[index]?.key ?? null);
+}
+
 export function WallPostItem({
   post,
   moderator,
+  hideBlock,
   onAction,
   onOpenPhoto,
 }: {
   post: WallPost;
   moderator: boolean;
+  /** The poster is already stopped from posting: don't offer it again. */
+  hideBlock?: boolean;
   onAction: (post: WallPost, action: WallAction['key']) => void;
   onOpenPhoto: (url: string) => void;
 }) {
   const { t } = useTranslation();
   const c = useColors();
-  const actions = postActions(post, moderator, t);
+  const actions = postActions(post, moderator, t).filter((a) => !(hideBlock && a.key === 'block'));
+
+  async function openMenu() {
+    const key = await choosePostAction(post, actions, t);
+    if (key) onAction(post, key);
+  }
   return (
     <View testID="wall-post" style={{ backgroundColor: c.surface, borderRadius: 12, padding: 12, gap: 6 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-        <Text style={{ color: c.text, fontWeight: '700' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ color: c.text, fontWeight: '700', flex: 1 }} numberOfLines={1}>
           {post.display_name}
           {post.is_host ? <Text style={{ color: c.accent }}>{` · ${t('wall.host_label')}`}</Text> : null}
         </Text>
         <Text style={{ color: c.muted, fontSize: 13 }}>{formatRelativeTime(new Date(post.created_at), deviceLocale)}</Text>
+        {actions.length > 0 ? (
+          <Pressable
+            testID="wall-post-menu"
+            accessibilityRole="button"
+            accessibilityLabel={t('wall.more_actions')}
+            onPress={() => void openMenu()}
+            hitSlop={10}
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, paddingHorizontal: 4 })}
+          >
+            <Text style={{ color: c.muted, fontSize: 20, fontWeight: '700', lineHeight: 20 }}>…</Text>
+          </Pressable>
+        ) : null}
       </View>
       {/* Plain text: never markup, never linkified. */}
       {post.body ? <Text testID="wall-body" style={{ color: c.text, fontSize: 16 }}>{post.body}</Text> : null}
@@ -165,15 +202,6 @@ export function WallPostItem({
                 style={{ width: '100%', aspectRatio: post.photos.length === 1 ? ph.width / ph.height : 1, borderRadius: 8 }}
                 contentFit="cover"
               />
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-      {actions.length > 0 ? (
-        <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
-          {actions.map((a) => (
-            <Pressable key={a.key} testID={`wall-action-${a.key}`} accessibilityRole="button" onPress={() => onAction(post, a.key)} hitSlop={6}>
-              <Text style={{ color: a.destructive ? c.danger : c.muted, fontSize: 14 }}>{a.label}</Text>
             </Pressable>
           ))}
         </View>

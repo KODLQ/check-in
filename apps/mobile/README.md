@@ -49,3 +49,27 @@ to add it with the Link sticker. The URL is also printed on the image.
 With neither ID set, tapping "Share to Story" on an active event downloads the story image
 (`/i/<token>/story?lang=<app language>` from `EXPO_PUBLIC_INVITE_BASE_URL`) and opens the share sheet
 directly, with the invite link on the clipboard.
+
+## Invite links that open the app (universal links / Android app links)
+
+`https://<host>/i/<token>` (invites) and `https://<host>/c/<token>` (co-host links) open the app when it is
+installed. `app.json` carries the placeholder host `checkin.example`; `plugins/with-app-links.js` replaces it at
+prebuild time with `APP_LINK_HOST`, or with the host of `EXPO_PUBLIC_INVITE_BASE_URL` when that is an `https`
+URL. Re-run prebuild and rebuild after changing it.
+
+- **iOS**: `applinks:<host>` in the entitlements; the web app serves `/.well-known/apple-app-site-association`.
+- **Android**: an `autoVerify` intent filter for `/i/*` and `/c/*`. Android only opens the app directly once
+  it has verified `https://<host>/.well-known/assetlinks.json`, which needs:
+  1. the real domain (verification never succeeds for `checkin.example`), and
+  2. the SHA-256 fingerprint of the **release** signing certificate (for Play builds: Play Console → App
+     integrity → App signing key certificate) in the web app's `ANDROID_SHA256_CERT_FINGERPRINT`. Debug builds
+     are signed with a different key, so they stay unverified unless you also add the debug fingerprint.
+
+  Check with `adb shell pm get-app-links se.checkin.app` (expect `verified` for the host) and re-run
+  verification with `adb shell pm verify-app-links --re-verify se.checkin.app`.
+
+## Brand colours on Android
+
+`plugins/with-android-accent.js` sets the app theme's `colorPrimary`/`colorAccent` (and the date/time picker
+and alert dialog themes) to the brand pink `#FF4D6D`, so native pickers, switches and dialog buttons don't use
+the stock Material colours.

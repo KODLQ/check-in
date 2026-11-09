@@ -142,8 +142,8 @@ export async function unregisterPush(): Promise<void> {
   await AsyncStorage.removeItem(TOKEN_KEY);
 }
 
-/** Sign out: unregister the device first (needs the session), then end the session. */
-export async function signOut(scope: 'global' | 'local' = 'global'): Promise<void> {
+/** Sign out: unregister the device first (needs the session), then end this device's session only. */
+export async function signOut(scope: 'global' | 'local' = 'local'): Promise<void> {
   await unregisterPush();
   await supabase.auth.signOut({ scope });
 }

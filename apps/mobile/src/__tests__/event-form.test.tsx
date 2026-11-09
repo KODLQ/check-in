@@ -66,7 +66,7 @@ describe('EventForm', () => {
     it('is collapsed and defaults to no plus-ones and no limit', async () => {
       const onSubmit = jest.fn().mockResolvedValue(undefined);
       await render(<EventForm submitLabel="Create event" onSubmit={onSubmit} now={now} />);
-      expect(screen.getByTestId('guests-summary')).toHaveTextContent('No plus-ones · No limit');
+      expect(screen.getByTestId('guests-summary')).toHaveTextContent('No plus-ones · No max');
       expect(screen.queryByTestId('capacity')).toBeNull();
       await fillBasics();
       await fireEvent.press(screen.getByTestId('submit'));
@@ -83,7 +83,7 @@ describe('EventForm', () => {
       await fireEvent.press(screen.getByTestId('max-plus-ones-increase'));
       await fireEvent.press(screen.getByTestId('max-plus-ones-increase'));
       await fireEvent.changeText(screen.getByTestId('capacity'), '30');
-      expect(screen.getByTestId('guests-summary')).toHaveTextContent('Up to +3 each · Max 30');
+      expect(screen.getByTestId('guests-summary')).toHaveTextContent('Plus-ones: up to 3 · Max 30 guests');
       await fireEvent.press(screen.getByTestId('submit'));
       await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
       expect(onSubmit.mock.calls[0][0]).toMatchObject({ allowPlusOnes: true, maxPlusOnes: 3, capacity: 30 });
@@ -96,7 +96,8 @@ describe('EventForm', () => {
       expect(screen.getByTestId('max-plus-ones-value')).toHaveTextContent('5');
     });
 
-    it.each(['0', '3001', '1.5', 'ten'])('blocks capacity %s', async (value) => {
+    // Non-digits ("1.5", "ten") can't be typed at all (event-form-unsaved.test.tsx).
+    it.each(['0', '3001'])('blocks capacity %s', async (value) => {
       const onSubmit = jest.fn();
       await render(<EventForm submitLabel="Create event" onSubmit={onSubmit} now={now} />);
       await fillBasics();

@@ -3,10 +3,12 @@ import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
   useColorScheme,
+  type SwitchProps,
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
@@ -34,6 +36,52 @@ const dark: typeof light = {
 
 export function useColors() {
   return useColorScheme() === 'dark' ? dark : light;
+}
+
+/** Brand-colored spinner (Android would otherwise use the stock Material accent). */
+export function Spinner({ style, size }: { style?: ViewStyle; size?: 'small' | 'large' }) {
+  const c = useColors();
+  return <ActivityIndicator color={c.accent} size={size} style={style} />;
+}
+
+/** Switch in brand colors on both platforms. */
+export function Toggle(props: SwitchProps) {
+  const c = useColors();
+  return (
+    <Switch
+      trackColor={{ false: c.border, true: c.accent }}
+      thumbColor="#FFFFFF"
+      ios_backgroundColor={c.border}
+      {...props}
+    />
+  );
+}
+
+/** Text button for the navigation header; plain text color so it reads on any header background. */
+export function HeaderButton({
+  title,
+  onPress,
+  testID,
+  accessibilityLabel,
+}: {
+  title: string;
+  onPress: () => void;
+  testID?: string;
+  accessibilityLabel?: string;
+}) {
+  const c = useColors();
+  return (
+    <Pressable
+      testID={testID}
+      hitSlop={12}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingHorizontal: 6 })}
+    >
+      <Text style={{ color: c.text, fontSize: 17, fontWeight: '600' }}>{title}</Text>
+    </Pressable>
+  );
 }
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {

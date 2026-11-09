@@ -1,6 +1,8 @@
 import '@/lib/i18n';
 
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { router } from 'expo-router';
+import { Linking } from 'react-native';
 
 import InviteInApp from '@/app/i/[token]';
 import { supabase } from '@/lib/supabase';
@@ -13,8 +15,27 @@ jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn() }));
 jest.mock('expo-notifications', () => ({}));
 jest.mock('expo-constants', () => ({ expoConfig: {} }));
 jest.mock('@/components/cover', () => ({ Cover: () => null }));
-jest.mock('@/lib/auth', () => ({ useAuth: () => ({ session: null, profile: null }) }));
-jest.mock('@/lib/supabase', () => ({ supabase: { rpc: jest.fn() } }));
+let mockAuth: { session: unknown; profile: unknown } = { session: null, profile: null };
+jest.mock('@/lib/auth', () => ({ useAuth: () => mockAuth }));
+let mockManagedEventId: string | null = null;
+jest.mock('@/lib/supabase', () => ({
+  supabase: {
+    rpc: jest.fn(),
+    from: jest.fn(() => {
+      const b: Record<string, unknown> = {};
+      b.select = () => b;
+      b.eq = () => b;
+      b.maybeSingle = async () => ({ data: mockManagedEventId ? { event_id: mockManagedEventId } : null, error: null });
+      return b;
+    }),
+  },
+}));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockAuth = { session: null, profile: null };
+  mockManagedEventId = null;
+});
 
 const fixture = (state: string, announcements?: unknown[]) => ({
   state,
@@ -51,5 +72,32 @@ describe('in-app invite announcements', () => {
     await render(<InviteInApp />);
     expect(await screen.findByText('This event has been cancelled.')).toBeTruthy();
     expect(screen.queryByText('Updates from the host')).toBeNull();
+  });
+});
+
+describe('in-app invite for hosts', () => {
+  it('sends a host or co-host opening their own invite link to the host view', async () => {
+    mockAuth = { session: { user: { id: 'host-1' } }, profile: { display_name: 'Demo Host' } };
+    mockManagedEventId = 'ev-9';
+    (supabase.rpc as jest.Mock).mockResolvedValue({ data: fixture('active') });
+    await render(<InviteInApp />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/events/ev-9'));
+    expect(screen.queryByTestId('answer-going')).toBeNull();
+  });
+
+  it('shows the guest view to a signed-in guest', async () => {
+    mockAuth = { session: { user: { id: 'guest-1' } }, profile: { display_name: 'Gina' } };
+    (supabase.rpc as jest.Mock).mockResolvedValue({ data: fixture('active') });
+    await render(<InviteInApp />);
+    expect(await screen.findByText('Fredagshäng')).toBeTruthy();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('opens the location in maps', async () => {
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    (supabase.rpc as jest.Mock).mockResolvedValue({ data: fixture('active') });
+    await render(<InviteInApp />);
+    await fireEvent.press(await screen.findByTestId('invite-location'));
+    expect(open).toHaveBeenCalledWith(expect.stringContaining('Hornsgatan'));
   });
 });

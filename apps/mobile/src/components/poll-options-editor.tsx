@@ -48,7 +48,11 @@ export function PollOptionsEditor({
   return (
     <View style={{ gap: 14 }} testID="poll-options">
       {options.map((o, i) => (
-        <View key={o.id ?? `new-${i}`} style={{ gap: 8, padding: 12, borderRadius: 14, backgroundColor: c.surface }}>
+        <View
+          key={o.id ?? `new-${i}`}
+          // Outlined (not filled) so the grey date fields inside stand out from the card.
+          style={{ gap: 8, padding: 12, borderRadius: 14, borderWidth: 1, borderColor: c.border, backgroundColor: c.bg }}
+        >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Label>{t('polls.option_n', { n: i + 1 })}</Label>
             {options.length > MIN_POLL_OPTIONS ? (
@@ -75,12 +79,15 @@ export function PollOptionsEditor({
               label={t('events.ends')}
               value={o.endsAt}
               onChange={(d) => update(i, { endsAt: d })}
+              onClear={() => update(i, { endsAt: null })}
+              clearLabel={t('events.remove_end')}
               error={err(errors?.byOption[i]?.endsAt)}
             />
           ) : (
             <Pressable
               testID={`option-${i}-add-end`}
               accessibilityRole="button"
+              hitSlop={10}
               onPress={() => update(i, { endsAt: new Date(o.startsAt.getTime() + 3 * HOUR) })}
             >
               <Text style={{ color: c.accent, fontWeight: '600' }}>{t('polls.add_end')}</Text>
