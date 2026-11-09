@@ -22,7 +22,7 @@ Each event SHALL have a wall shown on the web invite page and in the app. Anyone
 - **THEN** it contains no wall text, photos or poster names
 
 ### Requirement: Who can post
-The host SHALL be able to post on their event's wall. A guest SHALL be able to post only while their current response on that event is Going or Maybe. Everyone else, including people who answered Can't go or have not responded, SHALL be able to read but not post.
+The host and co-hosts SHALL be able to post on their event's wall. A guest SHALL be able to post only while their current response on that event is Going or Maybe. Everyone else, including people who answered Can't go, waitlisted guests, people who only voted in a date poll and people who have not responded, SHALL be able to read but not post.
 
 #### Scenario: Going guest posts
 - **WHEN** a guest whose response is Going submits a post
@@ -36,16 +36,24 @@ The host SHALL be able to post on their event's wall. A guest SHALL be able to p
 - **WHEN** a visitor without a response views the wall
 - **THEN** no post form is shown and they are invited to RSVP first
 
+#### Scenario: Waitlisted guest
+- **WHEN** a guest who is on the waitlist submits a post
+- **THEN** the post is rejected, and they can post once they are promoted to Going
+
+#### Scenario: Date poll voter
+- **WHEN** a guest who has only voted in the date poll of a date-pending event views the wall
+- **THEN** no post form is shown, while the host and co-hosts can already post
+
 ### Requirement: Posting identity
-A post SHALL be attributed to the same identity the poster RSVPed with: the device guest token on the web or the signed-in account in the app. The wall SHALL show each post's poster display name and time, and mark the host's posts as the host's.
+A post SHALL be attributed to the same identity the poster RSVPed with: the device guest token on the web or the signed-in account in the app. The wall SHALL show each post's poster display name and time, and mark posts by the host or a co-host as a host's.
 
 #### Scenario: Web guest posts
 - **WHEN** a web guest who RSVPed as "Sara" on this device posts
 - **THEN** the post shows "Sara" and is recognised as hers on later visits from the same device
 
 #### Scenario: Host post marked
-- **WHEN** the host posts on their wall
-- **THEN** the post shows the host's display name with a host label
+- **WHEN** the host or a co-host posts on the wall
+- **THEN** the post shows their display name with a host label
 
 ### Requirement: Post content
 A post SHALL contain text of at most 500 characters, one to four photos, or both. Empty posts SHALL be rejected. Text SHALL be displayed as plain text: no markup is rendered and links are not clickable.
@@ -63,7 +71,7 @@ A post SHALL contain text of at most 500 characters, one to four photos, or both
 - **THEN** it is shown literally as text, with no rendered markup and no clickable link
 
 ### Requirement: Posting window
-Posting SHALL be open from event creation until 14 days after the event has ended. After that, and for cancelled events, the wall SHALL be read-only, while still allowing posters to delete their own posts and the host to moderate.
+Posting SHALL be open from event creation until 14 days after the event has ended; an event whose date is still pending has not ended. After that, and for cancelled events, the wall SHALL be read-only, while still allowing posters to delete their own posts and the host and co-hosts to moderate.
 
 #### Scenario: Photos after the party
 - **WHEN** a Going guest posts photos two days after the event ended
@@ -89,7 +97,7 @@ The system SHALL accept photos in JPEG, PNG, WebP or HEIC format of at most 10 M
 - **THEN** it is rejected and never appears on the wall
 
 ### Requirement: Photo quota per guest
-Each guest SHALL be able to have at most 10 photos on a given event's wall at any time. Deleting a photo's post SHALL free its quota. The host SHALL NOT be limited by this quota.
+Each guest SHALL be able to have at most 10 photos on a given event's wall at any time. Deleting a photo's post SHALL free its quota. The host and co-hosts SHALL NOT be limited by this quota.
 
 #### Scenario: Eleventh photo
 - **WHEN** a guest who already has 10 photos on the wall tries to add another
@@ -107,7 +115,7 @@ Every photo SHALL be re-processed by the server before it becomes visible, remov
 - **THEN** it is not visible on the wall and cannot be fetched by any guest or host
 
 ### Requirement: Private photo delivery
-Wall photos SHALL NOT be publicly addressable. They SHALL be served only through links that expire within one hour and are issued only to someone who passed an active-invite-link or host check.
+Wall photos SHALL NOT be publicly addressable. They SHALL be served only through links that expire within one hour and are issued only to someone who passed an active-invite-link, host or co-host check.
 
 #### Scenario: Old photo link
 - **WHEN** someone opens a wall photo link more than one hour after it was issued
@@ -147,25 +155,29 @@ A poster SHALL be able to delete all of their posts on an event in one action.
 - **THEN** every post and photo they made on that event is permanently removed
 
 ### Requirement: Host deletes posts
-The host SHALL be able to delete any post on their event's wall, and SHALL be able to delete all posts by a given poster in one action.
+The host and co-hosts SHALL be able to delete any post on the event's wall, and SHALL be able to delete all posts by a given poster in one action.
 
 #### Scenario: Host removes an inappropriate post
 - **WHEN** the host deletes a guest's post
 - **THEN** it disappears from the wall for everyone and its photos can no longer be fetched
 
+#### Scenario: Co-host moderates
+- **WHEN** a co-host deletes a guest's post
+- **THEN** it disappears from the wall for everyone, including the owner
+
 ### Requirement: Wall on or off
-The host SHALL be able to turn the wall on or off for each event at any time. New events SHALL use the host's default setting, which is on unless the host changed it. While the wall is off, guests SHALL NOT see it or post; existing posts SHALL be kept and reappear when it is turned back on.
+The host and co-hosts SHALL be able to turn the wall on or off for each event at any time, including after it ended or was cancelled. New events SHALL use the host's default setting, which is on unless the host changed it. While the wall is off, guests SHALL NOT see it or post; existing posts SHALL be kept and reappear when it is turned back on.
 
 #### Scenario: Host turns the wall off
 - **WHEN** the host turns off the wall of an event
-- **THEN** guests opening the invite see no wall and cannot post, and the host still sees the existing posts in the app
+- **THEN** guests opening the invite see no wall and cannot post, and the host and co-hosts still see the existing posts in the app
 
 #### Scenario: Default off
 - **WHEN** a host whose default is "wall off" creates an event
 - **THEN** the new event's wall is off
 
 ### Requirement: Stop a guest from posting
-The host SHALL be able to stop a specific poster from posting on their event and later allow them again. Their existing posts SHALL remain unless deleted. Removing a guest's response SHALL NOT by itself delete their posts.
+The host and co-hosts SHALL be able to stop a specific poster from posting on the event and later allow them again. Their existing posts SHALL remain unless deleted. Removing a guest's response SHALL NOT by itself delete their posts.
 
 #### Scenario: Blocked guest tries to post
 - **WHEN** a guest the host has stopped from posting submits a post
@@ -183,7 +195,7 @@ The system SHALL limit how many posts and photo uploads a single client and a si
 - **THEN** it is rejected with a message that the wall is full
 
 ### Requirement: Live wall for hosts
-While the host has the wall open in the app, new and deleted posts SHALL appear or disappear within a few seconds without a manual refresh.
+While the host or a co-host has the wall open in the app, new and deleted posts SHALL appear or disappear within a few seconds without a manual refresh.
 
 #### Scenario: Guest posts while host is watching
 - **WHEN** a guest posts while the host has the wall open in the app

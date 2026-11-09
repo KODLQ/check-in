@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { parseAcceptLanguage, pickLocale, translations, type Locale } from '@check-in/shared';
+import { parseAcceptLanguage, pickLocale, translations, WALL_ERRORS, type Locale } from '@check-in/shared';
 import { headers } from 'next/headers';
 
 export async function getLocale(): Promise<Locale> {
@@ -62,6 +62,7 @@ export function clientStrings(t: T) {
     tooManyPlusOnes: t('errors.too_many_plus_ones', { max: '{{max}}' }),
     plusOnesNotAllowed: t('errors.plus_ones_not_allowed'),
     invalidStatus: t('errors.invalid_status'),
+    withdrawDeletePosts: t('wall.withdraw_delete_posts'),
   };
 }
 export type ClientStrings = ReturnType<typeof clientStrings>;
@@ -90,3 +91,25 @@ export function pollStrings(t: T) {
   };
 }
 export type PollStrings = ReturnType<typeof pollStrings>;
+
+/** Strings for the event wall client component (add-event-wall). Placeholders are filled on the client. */
+export function wallStrings(t: T) {
+  const keys = [
+    'title', 'placeholder', 'post', 'posting', 'add_photos', 'remove_photo', 'host_label', 'empty', 'load_more',
+    'delete', 'delete_confirm', 'your_posts', 'delete_all', 'delete_all_confirm', 'device_note', 'close', 'refresh',
+  ] as const;
+  const s = Object.fromEntries(keys.map((k) => [k, t(`wall.${k}`)])) as Record<(typeof keys)[number], string>;
+  return {
+    ...s,
+    counter: t('wall.counter', { count: '{{count}}' }),
+    uploading: t('wall.uploading', { done: '{{done}}', total: '{{total}}' }),
+    photoAlt: t('wall.photo_alt', { name: '{{name}}' }),
+    photosLeft: t('wall.photos_left', { count: '{{count}}' }),
+    photosLeftOne: t('wall.photos_left_one'),
+    reasons: Object.fromEntries(
+      ['not_attending', 'blocked', 'disabled', 'closed', 'cancelled'].map((r) => [r, t(`wall.reason.${r}`)]),
+    ) as Record<string, string>,
+    errors: Object.fromEntries(WALL_ERRORS.map((e) => [e, t(`wall.errors.${e}`)])) as Record<string, string>,
+  };
+}
+export type WallStrings = ReturnType<typeof wallStrings>;

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["arn1"],
+  "functions": {
+    "src/app/api/wall/uploads/**/complete/route.ts": { "memory": 1024, "maxDuration": 30 }
+  },
+  "crons": [{ "path": "/api/cron/storage-cleanup", "schedule": "*/10 * * * *" }]
+}

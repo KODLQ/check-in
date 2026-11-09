@@ -127,6 +127,7 @@ export function RsvpForm({
   emailUpdates,
   plusOnes,
   full,
+  wallPosts = false,
 }: {
   token: string;
   current: MyRsvp | null;
@@ -138,6 +139,8 @@ export function RsvpForm({
   plusOnes: { max: number } | null;
   /** No spot left: Going joins the waitlist. */
   full: boolean;
+  /** This device has wall posts on the event (add-event-wall): offer to delete them when withdrawing. */
+  wallPosts?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState(current?.display_name ?? '');
@@ -150,6 +153,8 @@ export function RsvpForm({
   const [emailError, setEmailError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
+  // Withdraw keeps wall posts unless the guest ticks this (spec: event-rsvp "Change or withdraw RSVP").
+  const [deletePosts, setDeletePosts] = useState(false);
   const subscribed = current?.email_updates?.state === 'on';
   const wantsToGo = current?.status === 'going' || current?.status === 'waitlisted';
   const [plus, setPlus] = useState(wantsToGo ? (current?.plus_ones ?? 0) : 0);
@@ -217,6 +222,7 @@ export function RsvpForm({
             ? { plusOnes: plus }
             : {}),
           ...emailBody,
+          ...(method === 'DELETE' && wallPosts && deletePosts ? { deletePosts: true } : {}),
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -387,14 +393,28 @@ export function RsvpForm({
           )
         ) : null}
         {current ? (
-          <button
-            type="button"
-            className="link-btn"
-            disabled={disabled}
-            onClick={() => send('DELETE')}
-          >
-            {strings.remove}
-          </button>
+          <div className="withdraw">
+            {wallPosts ? (
+              <label className="check small">
+                <input
+                  type="checkbox"
+                  data-testid="withdraw-delete-posts"
+                  checked={deletePosts}
+                  onChange={(e) => setDeletePosts(e.target.checked)}
+                />
+                <span>{strings.withdrawDeletePosts}</span>
+              </label>
+            ) : null}
+            <button
+              type="button"
+              className="link-btn"
+              data-testid="withdraw"
+              disabled={disabled}
+              onClick={() => send('DELETE')}
+            >
+              {strings.remove}
+            </button>
+          </div>
         ) : null}
       </section>
       {current ? <PlanYourOwn strings={strings} /> : null}

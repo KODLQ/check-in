@@ -201,6 +201,19 @@ export const TEMPLATES: Record<NotificationKind, KindTemplate> = {
       body: translate(l, 'notifications.date_picked.body', vars(ctx, l)),
     }),
   },
+  // add-event-wall: a count only. Never post text, photos or poster names (spec: notifications "Host wall digest").
+  wall_digest: {
+    push: (ctx, l) => {
+      const ids = ctx.payload?.post_ids;
+      const count = Array.isArray(ids) ? ids.length : 1;
+      return {
+        title: translate(l, 'notifications.wall_digest.title', vars(ctx, l)),
+        body: count > 1
+          ? translate(l, 'notifications.wall_digest.many', { count })
+          : translate(l, 'notifications.wall_digest.one'),
+      };
+    },
+  },
 };
 
 export function renderPush(kind: NotificationKind, locale: string | null | undefined, ctx: PushContext): PushMessage {

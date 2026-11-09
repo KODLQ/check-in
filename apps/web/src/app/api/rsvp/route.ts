@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { env } from '@/lib/env';
 import { allowedWrite as allowed } from '@/lib/rate-limit';
 import { serviceClient } from '@/lib/supabase';
+import { deleteMineForGuest } from '@/lib/wall/handlers';
+import { wallDb } from '@/lib/wall/deps';
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -68,14 +70,21 @@ export async function POST(req: Request) {
 const withdrawSchema = z.object({
   token: rsvpInputSchema.shape.token,
   guestToken: rsvpInputSchema.shape.guestToken,
+  /** Event wall (add-event-wall): also delete this device's wall posts and photos, in the same step. */
+  deletePosts: z.boolean().optional(),
 });
 
 export async function DELETE(req: Request) {
   const parsed = withdrawSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json({ error: 'invalid' }, 400);
-  const { token, guestToken } = parsed.data;
+  const { token, guestToken, deletePosts } = parsed.data;
   if (!(await allowed(req, token))) return json({ error: 'rate_limited' }, 429);
 
+  // Posts first, while the RSVP still links the browser to a claimed account (same poster identity).
+  // Without the option the posts stay (spec: event-rsvp "Change or withdraw RSVP").
+  if (deletePosts && !(await deleteMineForGuest(wallDb(), token, guestToken))) {
+    return json({ error: 'unknown' }, 500);
+  }
   const { data, error } = await serviceClient().rpc('withdraw_rsvp', {
     p_token: token,
     p_guest_token: guestToken,

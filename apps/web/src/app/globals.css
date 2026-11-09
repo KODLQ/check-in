@@ -88,3 +88,37 @@ label { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: 
 .poll-option { background: var(--bg); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .poll-option[data-passed] { opacity: 0.6; }
 .poll-option .choices .btn { min-height: 44px; font-size: 15px; padding: 0 8px; }
+
+/* Event wall (add-event-wall) */
+.small { font-size: 14px; }
+.check.small { font-size: 14px; }
+.withdraw { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.wall-composer { display: flex; flex-direction: column; gap: 8px; }
+.wall-composer textarea {
+  width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px; resize: vertical;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+}
+.wall-composer-row { display: flex; align-items: center; gap: 10px; }
+.wall-composer-row .btn.primary { margin-left: auto; min-height: 44px; }
+.wall-photo-btn { display: inline-flex; align-items: center; min-height: 44px; text-transform: none; color: var(--text); font-size: 15px; }
+.wall-previews { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.wall-previews li { position: relative; width: 72px; height: 72px; border-radius: 10px; overflow: hidden; background: var(--bg); font-size: 11px; }
+.wall-previews img { width: 100%; height: 100%; object-fit: cover; }
+.wall-previews button { position: absolute; top: 2px; right: 4px; color: #fff; text-decoration: none; text-shadow: 0 0 3px #000; }
+.wall-posts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.wall-post { background: var(--bg); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.wall-post-head { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.wall-author { font-weight: 700; }
+.wall-post time { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.wall-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wall-photos { display: grid; gap: 4px; grid-template-columns: repeat(2, 1fr); }
+.wall-photos.n1 { grid-template-columns: 1fr; }
+.wall-photo { appearance: none; border: 0; padding: 0; background: var(--surface); border-radius: 8px; overflow: hidden; cursor: zoom-in; aspect-ratio: 1; }
+.wall-photos.n1 .wall-photo { aspect-ratio: auto; max-height: 420px; }
+.wall-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wall-mine summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+.wall-mine[open] { display: flex; flex-direction: column; gap: 6px; }
+.wall-lightbox { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; }
+.wall-lightbox::backdrop { background: rgba(0, 0, 0, 0.85); }
+.wall-lightbox img { max-width: 96vw; max-height: 86vh; display: block; margin: 0 auto 10px; border-radius: 8px; }
+.wall-lightbox .btn { display: block; margin: 0 auto; }

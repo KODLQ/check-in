@@ -15,6 +15,8 @@ import { Body, Button, ErrorText, Screen, Title, useColors } from '@/components/
 import { locale } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { wallApi } from '@/lib/wall';
+import { withdrawChoices } from '@/components/wall';
 
 interface MyInviteDetail extends RsvpInvite {
   state: 'not_found' | 'cancelled' | 'past' | 'active';
@@ -87,30 +89,44 @@ export default function MyInviteScreen() {
     await load();
   }
 
-  function withdraw() {
+  async function withdraw() {
+    // Wall posts are kept unless the guest picks "also delete" (spec: event-rsvp "Change or withdraw RSVP").
+    const wall = await wallApi.feed({ eventId }).catch(() => null);
+    const hasPosts = wall?.state === 'ok' && wall.has_own_posts;
     Alert.alert(t('invites.withdraw_confirm_title'), t('invites.withdraw_confirm_body'), [
       { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('rsvp.remove'),
-        style: 'destructive',
-        onPress: async () => {
-          setError(null);
-          // Withdrawing goes through remove_rsvp (not a table DELETE) so a freed spot is passed on to
-          // the waitlist (spec: my-invites "Withdraw frees a spot").
-          const { data: own } = await supabase
-            .from('rsvps')
-            .select('id')
-            .eq('event_id', eventId)
-            .eq('user_id', session?.user.id ?? '')
-            .maybeSingle();
-          const { data: removed, error: delError } = own
-            ? await supabase.rpc('remove_rsvp', { p_rsvp_id: own.id })
-            : { data: false, error: null };
-          if (delError || !removed) setError(t('common.error'));
-          else router.back();
-        },
-      },
+      ...withdrawChoices(hasPosts, t).map((choice) => ({
+        text: choice.label,
+        style: 'destructive' as const,
+        onPress: () => void withdrawWith(choice.key === 'delete_posts'),
+      })),
     ]);
+  }
+
+  async function withdrawWith(deletePosts: boolean) {
+    setError(null);
+    if (deletePosts) {
+      // Posts first, while the RSVP still links this account to posts made from a claimed browser.
+      try {
+        await wallApi.deleteMine({ eventId });
+      } catch {
+        setError(t('common.error'));
+        return;
+      }
+    }
+    // Withdrawing goes through remove_rsvp (not a table DELETE) so a freed spot is passed on to
+    // the waitlist (spec: my-invites "Withdraw frees a spot").
+    const { data: own } = await supabase
+      .from('rsvps')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('user_id', session?.user.id ?? '')
+      .maybeSingle();
+    const { data: removed, error: delError } = own
+      ? await supabase.rpc('remove_rsvp', { p_rsvp_id: own.id })
+      : { data: false, error: null };
+    if (delError || !removed) setError(t('common.error'));
+    else router.back();
   }
 
   return (
@@ -145,7 +161,7 @@ export default function MyInviteScreen() {
       {open ? (
         <>
           <RsvpControls invite={invite} busy={busy} onRespond={(s, n) => void respond(s, n)} />
-          <Button testID="withdraw" variant="ghost" title={t('rsvp.remove')} onPress={withdraw} />
+          <Button testID="withdraw" variant="ghost" title={t('rsvp.remove')} onPress={() => void withdraw()} />
         </>
       ) : invite.my_rsvp ? (
         <Text testID="my-answer" style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>
@@ -153,6 +169,13 @@ export default function MyInviteScreen() {
         </Text>
       ) : null}
       <ErrorText>{error}</ErrorText>
+
+      <Button
+        testID="open-wall"
+        variant="secondary"
+        title={t('wall.open')}
+        onPress={() => router.push({ pathname: '/wall', params: { eventId, title: e.title } })}
+      />
 
       <CountsLine counts={invite.counts} />
       {invite.guests?.length ? (

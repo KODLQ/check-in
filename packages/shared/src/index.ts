@@ -7,5 +7,6 @@ export * from './home';
 export * from './hosts';
 export * from './capacity';
 export * from './polls';
+export * from './wall';
 export * from './i18n';
 export type { Database } from './database.types';

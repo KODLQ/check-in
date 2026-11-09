@@ -1,0 +1,50 @@
+-- Reusable event-wall fixture (change: add-event-wall). Include after plan() with:
+--   \ir fixtures/wall.psql
+-- Builds on fixtures/co_hosts.psql (owner A, co-host B, stranger C, former co-host D, account guest S;
+-- event E1 'CoHostTest01' with Gina going, Sara=S going, Milo maybe, Xena declined) and adds:
+--   * Wanda (web, waitlisted) on E1
+--   * W2: ended 13 days ago, Gina-like guest Pia going (token WallPast13dd)
+--   * W3: ended 15 days ago, Pia going (token WallPast15dd)
+--   * W4: cancelled, Pia going (token WallCancel01)
+--   * W5: date pending (no RSVPs; Vera has only voted) (token WallPending1)
+--   B co-hosts W3 and W5 as well.
+-- Guest tokens: :gina :milo :xena :wanda :pia :vera (raw tokens; the DB only ever stores their hashes).
+-- Everything runs inside the caller's transaction and is rolled back with the test.
+
+\ir co_hosts.psql
+
+\set W2 'c0000000-0000-0000-0000-0000000000a2'
+\set W3 'c0000000-0000-0000-0000-0000000000a3'
+\set W4 'c0000000-0000-0000-0000-0000000000a4'
+\set W5 'c0000000-0000-0000-0000-0000000000a5'
+\set gina 'cohost-guest-gina-0000000001'
+\set milo 'cohost-guest-milo-0000000001'
+\set xena 'cohost-guest-xena-0000000001'
+\set wanda 'wall-guest-wanda-00000000001'
+\set pia 'wall-guest-pia-0000000000001'
+\set vera 'wall-guest-vera-000000000001'
+
+reset role;
+insert into public.rsvps (event_id, guest_token_hash, display_name, status, waitlisted_at)
+values (:'E1', public.hash_guest_token(:'wanda'), 'Wanda', 'waitlisted', now());
+
+-- Past/cancelled/pending events: bypass events_guard (start in the past, pending start).
+set local session_replication_role = replica;
+insert into public.events (id, host_id, title, starts_at, ends_at, location_text, cancelled_at, wall_enabled) values
+  (:'W2', :'A', 'Ended 13d', now() - interval '13 days 3 hours', now() - interval '13 days', 'X', null, true),
+  (:'W3', :'A', 'Ended 15d', now() - interval '15 days 3 hours', now() - interval '15 days', 'X', null, true),
+  (:'W4', :'A', 'Cancelled', now() + interval '3 days', null, 'X', now() - interval '1 hour', true),
+  (:'W5', :'A', 'Pending', null, null, 'X', null, true);
+insert into public.event_invites (token, event_id) values
+  ('WallPast13dd', :'W2'), ('WallPast15dd', :'W3'), ('WallCancel01', :'W4'), ('WallPending1', :'W5');
+insert into public.rsvps (event_id, guest_token_hash, display_name, status) values
+  (:'W2', public.hash_guest_token(:'pia'), 'Pia', 'going'),
+  (:'W3', public.hash_guest_token(:'pia'), 'Pia', 'going'),
+  (:'W4', public.hash_guest_token(:'pia'), 'Pia', 'going');
+insert into public.date_poll_options (event_id, starts_at) values
+  (:'W5', now() + interval '5 days'), (:'W5', now() + interval '6 days');
+-- Erik (B) co-hosts the ended and pending events too.
+insert into public.event_co_hosts (event_id, user_id) values (:'W3', :'B'), (:'W5', :'B');
+insert into public.date_poll_voters (event_id, guest_token_hash, display_name)
+values (:'W5', public.hash_guest_token(:'vera'), 'Vera');
+set local session_replication_role = origin;

@@ -13,7 +13,7 @@ insert into rsvps (id, event_id, guest_token_hash, display_name, status) values
 -- 1.4: the registry must equal NOTIFICATION_KINDS in packages/shared/src/notifications/kinds.ts.
 -- packages/shared/src/notifications/kinds.test.ts parses the list below, so update both together.
 -- kinds: rsvp_email_confirmation:urgent:email, event_changed::push+email, event_cancelled:urgent:push+email,
---        event_reminder:stale:push+email, announcement:stale:push+email, rsvp_digest::push
+--        event_reminder:stale:push+email, announcement:stale:push+email, rsvp_digest::push, wall_digest::push
 select results_eq(
   $$ select kind, urgent, channels, stale_after_start from notification_kinds order by kind $$,
   $$ values
@@ -24,7 +24,8 @@ select results_eq(
        ('event_reminder', false, array['push', 'email'], true),
        ('rsvp_digest', false, array['push'], false),
        ('rsvp_email_confirmation', true, array['email'], false),
-       ('waitlist_promoted', false, array['push', 'email'], true) $$,
+       ('waitlist_promoted', false, array['push', 'email'], true),
+       ('wall_digest', false, array['push'], false) $$,
   'notification_kinds matches the shared NOTIFICATION_KINDS registry'
 );
 
@@ -88,7 +89,7 @@ select throws_ok($$ select enqueue_notification('announcement', '10000000-0000-0
   '42501', null, 'authenticated cannot call enqueue_notification');
 select throws_ok($$ select cancel_event_notifications('10000000-0000-0000-0000-000000000001') $$,
   '42501', null, 'authenticated cannot call cancel_event_notifications');
-select is((select count(*)::int from notification_kinds), 8, 'authenticated can read the kinds registry');
+select is((select count(*)::int from notification_kinds), 9, 'authenticated can read the kinds registry');
 select throws_ok($$ insert into notification_kinds (kind, channels) values ('spam', array['email']) $$,
   '42501', null, 'authenticated cannot add kinds');
 select ok(is_event_manager('10000000-0000-0000-0000-000000000001'), 'host is an event manager');

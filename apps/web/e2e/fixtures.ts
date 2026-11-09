@@ -196,3 +196,22 @@ export async function expirePoll(token: string) {
   const eventId = await eventIdFor(token);
   await sql`update public.date_poll_options set starts_at = starts_at - interval '30 days' where event_id = ${eventId}`;
 }
+
+// ---- Event wall (add-event-wall) ----
+
+/** HS256 access token for a local user, as Supabase Auth would issue it (local JWT secret only). */
+export async function localAccessToken(userId: string): Promise<string> {
+  const { createHmac } = await import('node:crypto');
+  // Users inserted straight into auth.users lack columns Supabase Auth needs to load them for getUser().
+  await sql`update auth.users set created_at = coalesce(created_at, now()), updated_at = coalesce(updated_at, now()),
+              raw_app_meta_data = coalesce(raw_app_meta_data, '{"provider":"email"}'::jsonb) where id = ${userId}`;
+  const secret = process.env.SUPABASE_JWT_SECRET ?? 'super-secret-jwt-token-with-at-least-32-characters-long';
+  const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const head = b64({ alg: 'HS256', typ: 'JWT' });
+  const body = b64({ sub: userId, role: 'authenticated', aud: 'authenticated', exp: Math.floor(Date.now() / 1000) + 3600 });
+  return `${head}.${body}.${createHmac('sha256', secret).update(`${head}.${body}`).digest('base64url')}`;
+}
+
+export async function cancelEvent(token: string) {
+  await sql`update public.events set cancelled_at = now() where id = ${await eventIdFor(token)}`;
+}

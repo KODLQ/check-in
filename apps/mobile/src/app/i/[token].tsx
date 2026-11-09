@@ -79,6 +79,15 @@ export default function InviteInApp() {
       <Screen>
         <Title>{invite.state === 'cancelled' ? invite.event?.title : t('invite.not_found_title')}</Title>
         <Body muted>{invite.state === 'cancelled' ? t('invite.cancelled_body') : t('invite.not_found_body')}</Body>
+        {/* Cancelled events keep a read-only wall (add-event-wall). */}
+        {invite.state === 'cancelled' && session && profile?.display_name ? (
+          <Button
+            testID="open-wall"
+            variant="secondary"
+            title={t('wall.open')}
+            onPress={() => router.push({ pathname: '/wall', params: { token } })}
+          />
+        ) : null}
       </Screen>
     );
   }
@@ -175,6 +184,14 @@ export default function InviteInApp() {
       ) : null}
       <ErrorText>{error}</ErrorText>
       {invite.state === 'date_pending' ? null : <CountsLine counts={invite.counts} />}
+      {signedIn ? (
+        <Button
+          testID="open-wall"
+          variant="secondary"
+          title={t('wall.open')}
+          onPress={() => router.push({ pathname: '/wall', params: { token, title: e.title } })}
+        />
+      ) : null}
       {!session ? <Button variant="ghost" title={t('invite.get_app')} onPress={() => router.replace('/sign-in')} /> : null}
     </ScrollView>
   );

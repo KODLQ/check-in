@@ -12,18 +12,33 @@ import { cookies } from 'next/headers';
 
 import { googleCalendarUrl } from '@/lib/calendar';
 import { env } from '@/lib/env';
-import { clientStrings, getLocale, makeT, pollStrings } from '@/lib/i18n';
+import { clientStrings, getLocale, makeT, pollStrings, wallStrings } from '@/lib/i18n';
 import { getInvite, GUEST_COOKIE, hostedByLine } from '@/lib/invite';
 import { avatarUrl, coverUrl } from '@/lib/supabase';
+import { wallDb } from '@/lib/wall/deps';
+import { loadFeed } from '@/lib/wall/handlers';
 import { PollForm } from './poll-form';
 import { RsvpForm } from './rsvp-form';
 import { ShareInvite } from './share-invite';
+import { Wall } from './wall';
 
 type Props = PageProps<'/i/[token]'>;
 
 async function load(token: string) {
   const guestToken = (await cookies()).get(GUEST_COOKIE)?.value;
   return getInvite(token, guestToken);
+}
+
+/**
+ * First page of the event wall (add-event-wall), with photo URLs signed for at most an hour, so photos are
+ * in the first HTML. Only for links get_invite accepted; never used by generateMetadata (no wall content in
+ * link previews). Null when the wall is off for guests, the feature flag is off, or the link is unknown.
+ */
+async function loadWall(token: string) {
+  if (!env.wallEnabled) return null;
+  const guestToken = (await cookies()).get(GUEST_COOKIE)?.value ?? null;
+  const feed = await loadFeed(wallDb(), { token, eventId: null, userId: null, guestToken });
+  return feed.state === 'ok' ? feed : null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -67,8 +82,20 @@ export default async function InvitePage({ params }: Props) {
   if (invite.state === 'not_found') {
     return <NotFound title={t('invite.not_found_title')} body={t('invite.not_found_body')} />;
   }
+  const wall = await loadWall(token);
+  const wallSection = (timeZone: string) =>
+    wall ? <Wall token={token} initial={wall} strings={wallStrings(t)} locale={locale} timeZone={timeZone} /> : null;
+
   if (invite.state === 'cancelled') {
-    return <NotFound title={invite.event.title} body={t('invite.cancelled_body')} />;
+    // The cancelled notice together with the existing wall, read-only (spec: event-wall "Posting window").
+    if (!wall) return <NotFound title={invite.event.title} body={t('invite.cancelled_body')} />;
+    return (
+      <main className="page">
+        <h1>{invite.event.title}</h1>
+        <p className="card muted" data-testid="cancelled">{t('invite.cancelled_body')}</p>
+        {wallSection('Europe/Stockholm')}
+      </main>
+    );
   }
 
   const e = invite.event;
@@ -164,6 +191,7 @@ export default async function InvitePage({ params }: Props) {
         </section>
         <PollForm token={token} poll={poll} labels={labels} myVotes={invite.my_votes} strings={pollStrings(t)} />
         {poll.voting_open ? share : null}
+        {wallSection(e.time_zone)}
       </main>
     );
   }
@@ -188,6 +216,7 @@ export default async function InvitePage({ params }: Props) {
           emailUpdates={env.emailUpdatesEnabled}
           plusOnes={e.allow_plus_ones ? { max: e.max_plus_ones } : null}
           full={invite.counts.full}
+          wallPosts={wall?.has_own_posts ?? false}
         />
       )}
 
@@ -223,6 +252,8 @@ export default async function InvitePage({ params }: Props) {
           </ul>
         ) : null}
       </section>
+
+      {wallSection(e.time_zone)}
 
       {share}
 

@@ -19,6 +19,7 @@ import { errorKey, fetchActiveInvite } from '@/lib/events';
 import { locale } from '@/lib/i18n';
 import { allVotes, loadHostPoll, type HostPoll, type PollOptionRow, type PollVoterRow } from '@/lib/polls';
 import { supabase, type EventRow, type RsvpRow } from '@/lib/supabase';
+import { wallApi, wallErrorKey } from '@/lib/wall';
 
 /** While the screen is focused, re-check access this often so a removed co-host is told promptly. */
 const ACCESS_CHECK_MS = 30_000;
@@ -228,6 +229,18 @@ export default function EventDetail() {
     ]);
   }
 
+  // Event wall on/off (add-event-wall): through the API, allowed for the owner and co-hosts at any time,
+  // including after the event ended or was cancelled.
+  async function toggleWall(on: boolean) {
+    setEvent({ ...event!, wall_enabled: on });
+    try {
+      await wallApi.setEnabled(id, on);
+    } catch (e) {
+      setToast(t(wallErrorKey(e)));
+      setEvent({ ...event!, wall_enabled: !on });
+    }
+  }
+
   async function toggleGuestList(visible: boolean) {
     setEvent({ ...event!, guest_list_visible: visible });
     await supabase.from('events').update({ guest_list_visible: visible }).eq('id', id);
@@ -344,6 +357,22 @@ export default function EventDetail() {
             )}
           </AnnouncementsCard>
         ) : null}
+
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Label>{t('wall.title')}</Label>
+              <Body muted>{event.wall_enabled ? t('wall.toggle_hint') : t('wall.off_host')}</Body>
+            </View>
+            <Switch testID="wall-toggle" value={event.wall_enabled} onValueChange={(on) => void toggleWall(on)} />
+          </View>
+          <Button
+            testID="open-wall"
+            variant="secondary"
+            title={t('wall.open')}
+            onPress={() => router.push({ pathname: '/wall', params: { eventId: id, title: event.title } })}
+          />
+        </Card>
 
         {pending && poll ? (
           <PollResults

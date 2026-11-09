@@ -1,16 +1,25 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, Switch, View } from 'react-native';
 
-import { Body, Button, Title, useColors } from '@/components/ui';
+import { Body, Button, Label, Title, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { forgetLocalPushToken, signOut } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 
 export default function Settings() {
   const { t } = useTranslation();
-  const { profile, session } = useAuth();
+  const { profile, session, refreshProfile } = useAuth();
   const [busy, setBusy] = useState(false);
+  // Event wall default for new events (add-event-wall). The events insert trigger copies it.
+  const [wallDefault, setWallDefault] = useState(profile?.wall_default_enabled ?? true);
+
+  async function toggleWallDefault(on: boolean) {
+    setWallDefault(on);
+    const { error } = await supabase.from('profiles').update({ wall_default_enabled: on }).eq('id', session?.user.id ?? '');
+    if (error) setWallDefault(!on);
+    else await refreshProfile();
+  }
   const c = useColors();
 
   function confirmDelete() {
@@ -41,6 +50,12 @@ export default function Settings() {
     >
       <Title>{profile?.display_name}</Title>
       <Body muted>{session?.user.email}</Body>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Label>{t('wall.default_toggle')}</Label>
+        </View>
+        <Switch testID="wall-default-toggle" value={wallDefault} onValueChange={(on) => void toggleWallDefault(on)} />
+      </View>
       <Button variant="secondary" title={t('auth.sign_out')} onPress={() => void signOut()} />
       <Button variant="danger" title={t('profile.delete_account')} loading={busy} onPress={confirmDelete} />
     </ScrollView>

@@ -195,14 +195,14 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "allow_plus_ones": boolean,"cancelled_at": string | null,"capacity": number | null,"cover_path": string | null,"created_at": string,"date_picked_at": string | null,"description": string | null,"ends_at": string | null,"guest_list_visible": boolean,"host_id": string,"id": string,"latitude": number | null,"location_point": unknown,"location_text": string,"longitude": number | null,"max_plus_ones": number,"place_name": string | null,"poll_closes_at": string | null,"starts_at": string | null,"theme": string,"time_changed_at": string | null,"time_zone": string,"title": string,"updated_at": string,"event_ended_at": string | null
+                    "allow_plus_ones": boolean,"cancelled_at": string | null,"capacity": number | null,"cover_path": string | null,"created_at": string,"date_picked_at": string | null,"description": string | null,"ends_at": string | null,"guest_list_visible": boolean,"host_id": string,"id": string,"latitude": number | null,"location_point": unknown,"location_text": string,"longitude": number | null,"max_plus_ones": number,"place_name": string | null,"poll_closes_at": string | null,"starts_at": string | null,"theme": string,"time_changed_at": string | null,"time_zone": string,"title": string,"updated_at": string,"wall_enabled": boolean,"event_ended_at": string | null
                   }
                   ComputedFields: "event_ended_at"
                   Insert: {
-                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text": string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"poll_closes_at"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title": string,"updated_at"?: string
+                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text": string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"poll_closes_at"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title": string,"updated_at"?: string,"wall_enabled"?: boolean
                   }
                   Update: {
-                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text"?: string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"poll_closes_at"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title"?: string,"updated_at"?: string
+                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text"?: string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"poll_closes_at"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title"?: string,"updated_at"?: string,"wall_enabled"?: boolean
                   }
                   Relationships: [
                     {
@@ -307,14 +307,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "avatar_path": string | null,"created_at": string,"display_name": string | null,"id": string,"locale": string | null,"updated_at": string
+                    "avatar_path": string | null,"created_at": string,"display_name": string | null,"id": string,"locale": string | null,"updated_at": string,"wall_default_enabled": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "avatar_path"?: string | null,"created_at"?: string,"display_name"?: string | null,"id": string,"locale"?: string | null,"updated_at"?: string
+                    "avatar_path"?: string | null,"created_at"?: string,"display_name"?: string | null,"id": string,"locale"?: string | null,"updated_at"?: string,"wall_default_enabled"?: boolean
                   }
                   Update: {
-                    "avatar_path"?: string | null,"created_at"?: string,"display_name"?: string | null,"id"?: string,"locale"?: string | null,"updated_at"?: string
+                    "avatar_path"?: string | null,"created_at"?: string,"display_name"?: string | null,"id"?: string,"locale"?: string | null,"updated_at"?: string,"wall_default_enabled"?: boolean
                   }
                   Relationships: [
                     
@@ -419,6 +419,130 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"storage_deletion_queue": {
+                  Row: {
+                    "attempts": number,"bucket": string,"enqueued_at": string,"id": number,"last_error": string | null,"next_attempt_at": string,"path": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"bucket": string,"enqueued_at"?: string,"id"?: never,"last_error"?: string | null,"next_attempt_at"?: string,"path": string
+                  }
+                  Update: {
+                    "attempts"?: number,"bucket"?: string,"enqueued_at"?: string,"id"?: never,"last_error"?: string | null,"next_attempt_at"?: string,"path"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"wall_blocks": {
+                  Row: {
+                    "created_at": string,"display_name": string,"event_id": string,"guest_hash": string | null,"id": string,"user_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"display_name": string,"event_id": string,"guest_hash"?: string | null,"id"?: string,"user_id"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"display_name"?: string,"event_id"?: string,"guest_hash"?: string | null,"id"?: string,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "wall_blocks_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "wall_blocks_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"wall_photos": {
+                  Row: {
+                    "author_guest_hash": string | null,"author_user_id": string | null,"created_at": string,"event_id": string,"full_path": string,"height": number,"id": string,"is_host": boolean,"position": number,"post_id": string,"thumb_path": string,"width": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_guest_hash"?: string | null,"author_user_id"?: string | null,"created_at"?: string,"event_id": string,"full_path": string,"height": number,"id"?: string,"is_host"?: boolean,"position": number,"post_id": string,"thumb_path": string,"width": number
+                  }
+                  Update: {
+                    "author_guest_hash"?: string | null,"author_user_id"?: string | null,"created_at"?: string,"event_id"?: string,"full_path"?: string,"height"?: number,"id"?: string,"is_host"?: boolean,"position"?: number,"post_id"?: string,"thumb_path"?: string,"width"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "wall_photos_author_user_id_fkey"
+      columns: ["author_user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "wall_photos_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "wall_photos_post_id_fkey"
+      columns: ["post_id"]
+isOneToOne: false
+      referencedRelation: "wall_posts"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"wall_posts": {
+                  Row: {
+                    "author_display_name": string,"author_guest_hash": string | null,"author_user_id": string | null,"body": string | null,"created_at": string,"event_id": string,"id": string,"is_host": boolean,"photo_count": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_display_name": string,"author_guest_hash"?: string | null,"author_user_id"?: string | null,"body"?: string | null,"created_at"?: string,"event_id": string,"id"?: string,"is_host"?: boolean,"photo_count"?: number
+                  }
+                  Update: {
+                    "author_display_name"?: string,"author_guest_hash"?: string | null,"author_user_id"?: string | null,"body"?: string | null,"created_at"?: string,"event_id"?: string,"id"?: string,"is_host"?: boolean,"photo_count"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "wall_posts_author_user_id_fkey"
+      columns: ["author_user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "wall_posts_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"wall_uploads": {
+                  Row: {
+                    "author_guest_hash": string | null,"author_user_id": string | null,"content_type": string,"created_at": string,"event_id": string,"expires_at": string,"full_path": string | null,"height": number | null,"id": string,"incoming_path": string,"is_host": boolean,"size": number,"status": string,"thumb_path": string | null,"width": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_guest_hash"?: string | null,"author_user_id"?: string | null,"content_type": string,"created_at"?: string,"event_id": string,"expires_at"?: string,"full_path"?: string | null,"height"?: number | null,"id"?: string,"incoming_path": string,"is_host"?: boolean,"size": number,"status"?: string,"thumb_path"?: string | null,"width"?: number | null
+                  }
+                  Update: {
+                    "author_guest_hash"?: string | null,"author_user_id"?: string | null,"content_type"?: string,"created_at"?: string,"event_id"?: string,"expires_at"?: string,"full_path"?: string | null,"height"?: number | null,"id"?: string,"incoming_path"?: string,"is_host"?: boolean,"size"?: number,"status"?: string,"thumb_path"?: string | null,"width"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "wall_uploads_author_user_id_fkey"
+      columns: ["author_user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "wall_uploads_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -430,6 +554,9 @@ isOneToOne: false
                            },
 "apply_quiet_hours":
 { Args: { "p_ts": string,"p_urgent": boolean }; Returns: string
+                           },
+"can_moderate_event":
+{ Args: { "p_event_id": string,"p_user_id": string }; Returns: boolean
                            },
 "can_read_voter":
 { Args: { "p_voter_id": string }; Returns: boolean
@@ -574,7 +701,8 @@ isOneToOne: false
 "time_changed_at": string | null,
 "time_zone": string,
 "title": string,
-"updated_at": string
+"updated_at": string,
+"wall_enabled": boolean
             }
                           SetofOptions: {
         from: "*"
@@ -607,7 +735,8 @@ isOneToOne: false
 "time_changed_at": string | null,
 "time_zone": string,
 "title": string,
-"updated_at": string
+"updated_at": string,
+"wall_enabled": boolean
             }
                           SetofOptions: {
         from: "*"
@@ -640,7 +769,8 @@ isOneToOne: false
 "time_changed_at": string | null,
 "time_zone": string,
 "title": string,
-"updated_at": string
+"updated_at": string,
+"wall_enabled": boolean
             }
                           SetofOptions: {
         from: "*"
@@ -724,7 +854,8 @@ isOneToOne: false
 "time_changed_at": string | null,
 "time_zone": string,
 "title": string,
-"updated_at": string
+"updated_at": string,
+"wall_enabled": boolean
             }
                           SetofOptions: {
         from: "*"
@@ -809,6 +940,17 @@ isOneToOne: false
 "set_poll_options":
 { Args: { "p_closes_at"?: string,"p_event_id": string,"p_options": Json }; Returns: number
                            },
+"storage_queue_claim":
+{ Args: { "p_limit"?: number,"p_now"?: string }; Returns: {
+              "attempts": number,"bucket": string,"id": number,"path": string
+            }[]
+                           },
+"storage_queue_done":
+{ Args: { "p_ids": (number)[] }; Returns: number
+                           },
+"storage_queue_failed":
+{ Args: { "p_error": string,"p_ids": (number)[] }; Returns: undefined
+                           },
 "submit_votes":
 { Args: { "p_display_name": string,"p_guest_token": string,"p_token": string,"p_votes": Json }; Returns: Json
                            },
@@ -833,6 +975,102 @@ isOneToOne: false
 "waitlist_position":
 { Args: { "p_rsvp_id": string }; Returns: number
                            },
+"wall_actor_for":
+{ Args: { "p_event_id": string,"p_guest_hash": string,"p_user_id": string }; Returns: Database["public"]['CompositeTypes']["wall_actor"]
+                          SetofOptions: {
+        from: "*"
+        to: "wall_actor"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"wall_actor_photo_count":
+{ Args: { "a": Database["public"]['CompositeTypes']["wall_actor"],"p_event_id": string,"p_now"?: string }; Returns: number
+                           },
+"wall_block_author":
+{ Args: { "p_event_id": string,"p_post_id": string,"p_user_id": string }; Returns: Json
+                           },
+"wall_can_post":
+{ Args: { "p_event_id": string,"p_guest_hash": string,"p_now"?: string,"p_user_id": string }; Returns: string
+                           },
+"wall_claim_upload":
+{ Args: { "p_event_id": string,"p_guest_token": string,"p_token": string,"p_upload_id": string,"p_user_id": string }; Returns: Json
+                           },
+"wall_create_post":
+{ Args: { "p_body": string,"p_event_id": string,"p_guest_token": string,"p_token": string,"p_upload_ids"?: (string)[],"p_user_id": string }; Returns: Json
+                           },
+"wall_delete_mine":
+{ Args: { "p_event_id": string,"p_guest_token": string,"p_token": string,"p_user_id": string }; Returns: Json
+                           },
+"wall_delete_post":
+{ Args: { "p_all_by_author"?: boolean,"p_event_id": string,"p_guest_token": string,"p_post_id": string,"p_token": string,"p_user_id": string }; Returns: Json
+                           },
+"wall_enqueue_orphans":
+{ Args: { "p_now"?: string }; Returns: number
+                           },
+"wall_event":
+{ Args: { "p_event_id": string,"p_token": string,"p_user_id": string }; Returns: {
+              "allow_plus_ones": boolean,
+"cancelled_at": string | null,
+"capacity": number | null,
+"cover_path": string | null,
+"created_at": string,
+"date_picked_at": string | null,
+"description": string | null,
+"ends_at": string | null,
+"guest_list_visible": boolean,
+"host_id": string,
+"id": string,
+"latitude": number | null,
+"location_point": unknown,
+"location_text": string,
+"longitude": number | null,
+"max_plus_ones": number,
+"place_name": string | null,
+"poll_closes_at": string | null,
+"starts_at": string | null,
+"theme": string,
+"time_changed_at": string | null,
+"time_zone": string,
+"title": string,
+"updated_at": string,
+"wall_enabled": boolean
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "events"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"wall_feed":
+{ Args: { "p_before_created_at"?: string,"p_before_id"?: string,"p_event_id"?: string,"p_guest_token"?: string,"p_limit"?: number,"p_token"?: string,"p_user_id"?: string }; Returns: Json
+                           },
+"wall_guest_hash":
+{ Args: { "p_guest_token": string }; Returns: string
+                           },
+"wall_is_blocked":
+{ Args: { "a": Database["public"]['CompositeTypes']["wall_actor"],"p_event_id": string }; Returns: boolean
+                           },
+"wall_limits":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"wall_mark_upload":
+{ Args: { "p_full_path"?: string,"p_height"?: number,"p_status": string,"p_thumb_path"?: string,"p_upload_id": string,"p_width"?: number }; Returns: boolean
+                           },
+"wall_post_reason":
+{ Args: { "a": Database["public"]['CompositeTypes']["wall_actor"],"ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"p_now"?: string }; Returns: string
+                           },
+"wall_queue_for":
+{ Args: { "p_paths": (string)[] }; Returns: Json
+                           },
+"wall_reserve_upload":
+{ Args: { "p_content_type": string,"p_event_id": string,"p_guest_token": string,"p_size": number,"p_token": string,"p_user_id": string }; Returns: Json
+                           },
+"wall_set_enabled":
+{ Args: { "p_enabled": boolean,"p_event_id": string,"p_user_id": string }; Returns: boolean
+                           },
+"wall_unblock":
+{ Args: { "p_block_id": string,"p_event_id": string,"p_user_id": string }; Returns: boolean
+                           },
 "withdraw_rsvp":
 { Args: { "p_guest_token": string,"p_token": string }; Returns: boolean
                            },
@@ -847,7 +1085,9 @@ isOneToOne: false
             "rsvp_status": "going"|"maybe"|"declined"|"waitlisted","vote_choice": "yes"|"if_needed"|"no"
           }
           CompositeTypes: {
-            [_ in never]: never
+            "wall_actor": {
+                        "user_id": string | null,"guest_hash": string | null,"is_host": boolean | null,"status": Database["public"]['Enums']["rsvp_status"] | null,"display_name": string | null
+                      }
           }
         }
 }

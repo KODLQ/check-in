@@ -2,6 +2,9 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@check-in/shared'],
+  // Event wall photo pipeline: libheif's WASM build must be loaded by Node's require, not bundled
+  // (sharp is external by default).
+  serverExternalPackages: ['heic-decode', 'libheif-js'],
   // Chat apps (iMessage, WhatsApp, Snapchat, Discord…) read link previews from <head>.
   // Never stream metadata, so every client gets OG tags in the initial HTML.
   htmlLimitedBots: /.*/,

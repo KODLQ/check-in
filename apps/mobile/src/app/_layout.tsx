@@ -68,6 +68,8 @@ function RootStack() {
           options={{ title: t('polls.edit_options'), presentation: 'modal' }}
         />
         <Stack.Screen name="settings" options={{ title: '' }} />
+        {/* Event wall (add-event-wall): /wall?eventId=… or /wall?token=… */}
+        <Stack.Screen name="wall" options={{ title: '' }} />
       </Stack.Protected>
     </Stack>
   );

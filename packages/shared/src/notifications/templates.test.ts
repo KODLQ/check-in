@@ -90,6 +90,12 @@ describe('notification templates', () => {
     expect(renderPush('date_picked', 'sv', ctx).title).toBe('Datum klart: Fredagshäng');
   });
 
+  it('counts new wall posts without names or text (add-event-wall)', () => {
+    const one = renderPush('wall_digest', 'en', { ...ctx, payload: { post_ids: ['a'] }, urlPath: '/events/abc' });
+    expect(one).toEqual({ title: 'Fredagshäng', body: 'New post on the wall', data: { kind: 'wall_digest', url: '/events/abc' } });
+    expect(renderPush('wall_digest', 'sv', { ...ctx, payload: { post_ids: ['a', 'b', 'c'] } }).body).toBe('3 nya inlägg på väggen');
+  });
+
   it('says "Date TBD" instead of a time while a poll is open', () => {
     const pending = { ...ctx, event: { ...ctx.event, starts_at: null, ends_at: null } };
     expect(renderEmail('event_cancelled', 'en', pending).text).toContain('planned for Date TBD');

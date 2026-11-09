@@ -405,3 +405,25 @@ exports[`notification templates > push waitlist_promoted sv 1`] = `
   "title": "Du fick en plats på Fredagshäng",
 }
 `;
+
+exports[`notification templates > push wall_digest en 1`] = `
+{
+  "body": "New post on the wall",
+  "data": {
+    "kind": "wall_digest",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng",
+}
+`;
+
+exports[`notification templates > push wall_digest sv 1`] = `
+{
+  "body": "Nytt inlägg på väggen",
+  "data": {
+    "kind": "wall_digest",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Fredagshäng",
+}
+`;
