@@ -7,7 +7,7 @@ Lets invited guests answer whether they are coming with one tap and no account, 
 ## Requirements
 
 ### Requirement: RSVP without account
-A guest SHALL be able to respond Going, Maybe or Can't go from the invite page by entering only a display name. No account, email, phone number or app install SHALL be required. The page SHALL offer an optional email field with an unticked "Email me updates about this event" consent; an email SHALL be accepted only with the consent ticked, and the consent time SHALL be recorded. When the host allows plus-ones, a guest answering Going SHALL be able to add between 0 and the host's maximum plus-ones; Maybe and Can't go SHALL carry no plus-ones.
+A guest SHALL be able to respond Going, Maybe or Can't go from the invite page by entering only a display name. No account, email, phone number or app install SHALL be required.
 
 #### Scenario: First-time guest RSVPs
 - **WHEN** a guest enters a display name and taps Going on an active invite
@@ -20,6 +20,9 @@ A guest SHALL be able to respond Going, Maybe or Can't go from the invite page b
 #### Scenario: Signed-in user RSVPs
 - **WHEN** a signed-in user responds to an invite
 - **THEN** their profile display name is used and they are not asked for a name
+
+### Requirement: Optional email updates on RSVP
+The invite page SHALL offer an optional email field with an unticked "Email me updates about this event" consent. An email SHALL be accepted only with the consent ticked, and the consent time SHALL be recorded.
 
 #### Scenario: RSVP with email updates
 - **WHEN** a guest enters a name and an email, ticks "Email me updates about this event" and taps Going
@@ -36,6 +39,9 @@ A guest SHALL be able to respond Going, Maybe or Can't go from the invite page b
 #### Scenario: Invalid email
 - **WHEN** a guest enters a malformed email with the consent ticked
 - **THEN** the response is not saved and the email field shows an error
+
+### Requirement: Plus-ones on RSVP
+When the host allows plus-ones, a guest answering Going SHALL be able to add between 0 and the host's maximum plus-ones. Maybe and Can't go SHALL carry no plus-ones.
 
 #### Scenario: Going with plus-ones
 - **WHEN** the host allows up to 2 plus-ones and a guest answers Going with 2 plus-ones
@@ -54,7 +60,7 @@ A guest SHALL be able to respond Going, Maybe or Can't go from the invite page b
 - **THEN** their response is saved as Maybe with no plus-ones
 
 ### Requirement: Change or withdraw RSVP
-A guest SHALL be able to change or withdraw their response, including their number of plus-ones, later from the same browser or device, without signing in. From the same device the guest SHALL also be able to turn email updates on or off; turning them off or withdrawing SHALL delete the stored email. Changing or withdrawing SHALL remain possible from the same browser after the response has been claimed by an account. A change or withdrawal that frees spots SHALL let waitlisted guests be promoted, and turning email updates on or off SHALL NOT change the guest's answer, plus-ones or waitlist place.
+A guest SHALL be able to change or withdraw their response, including their number of plus-ones, later from the same browser or device, without signing in. This SHALL remain possible from the same browser after the response has been claimed by an account. A change or withdrawal that frees spots SHALL let waitlisted guests be promoted.
 
 #### Scenario: Guest changes answer
 - **WHEN** a guest who answered Maybe opens the invite again on the same device and taps Going
@@ -68,14 +74,6 @@ A guest SHALL be able to change or withdraw their response, including their numb
 - **WHEN** a guest opens the invite on a device where they have not responded
 - **THEN** they are treated as a new guest
 
-#### Scenario: Turn off email updates
-- **WHEN** a subscribed guest turns off email updates on the invite page
-- **THEN** their response is kept, their email is deleted, and no further emails are sent about the event
-
-#### Scenario: Add email later
-- **WHEN** a guest who responded without an email later adds one with the consent ticked on the same device
-- **THEN** they are subscribed to updates for this event and their response is unchanged
-
 #### Scenario: Same browser after claiming
 - **WHEN** a guest whose web response was claimed into their account opens the invite again in the same browser and taps Can't go
 - **THEN** the claimed response is updated, the account still holds it, and no duplicate response is created
@@ -87,6 +85,17 @@ A guest SHALL be able to change or withdraw their response, including their numb
 #### Scenario: Going guest adds plus-ones beyond capacity
 - **WHEN** a Going guest asks for more plus-ones than there are spots left
 - **THEN** the change is rejected, they keep their current Going answer, and they are told how many spots are left
+
+### Requirement: Manage email updates from the same device
+From the same browser or device a guest SHALL be able to turn email updates on or off. Turning them off or withdrawing SHALL delete the stored email, and turning them on or off SHALL NOT change the guest's answer, plus-ones or waitlist place.
+
+#### Scenario: Turn off email updates
+- **WHEN** a subscribed guest turns off email updates on the invite page
+- **THEN** their response is kept, their email is deleted, and no further emails are sent about the event
+
+#### Scenario: Add email later
+- **WHEN** a guest who responded without an email later adds one with the consent ticked on the same device
+- **THEN** they are subscribed to updates for this event and their response is unchanged
 
 #### Scenario: Waitlisted guest adds email
 - **WHEN** a waitlisted guest turns on email updates
