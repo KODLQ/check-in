@@ -1,0 +1,84 @@
+-- Reusable date-poll fixture (change: add-date-polls). Include after plan() with:
+--   \ir fixtures/date_polls.psql
+-- Not a test file itself (pg_prove only runs *.sql); runs inside the caller's transaction and is rolled
+-- back with it. All ids/tokens are fixed and unique to this fixture, and the helpers filter on them, so
+-- leftover local data never changes results.
+--
+-- Users: owner O, co-host K, stranger X, signed-in voters U and V.
+-- pg_temp.mk_poll(id, token, hours[], capacity, guest_list_visible) creates a date-pending event owned by O
+--   (K co-hosts) with one option per entry of hours[] (now() + h hours) and gives its link the fixed token.
+-- pg_temp.opt(event, n) -> id of the n-th option by start time.
+-- pg_temp.vote(token, name, choices[]) votes as web guest <name>; choices[i] answers option i (null = skip).
+-- pg_temp.ballot(event, choices[]) -> the jsonb ballot for those choices.
+-- Switch identity with :as_O / :as_K / :as_X / :as_U / :as_V followed by `set local role authenticated;`.
+
+\set O '00000000-0000-0000-0000-0000000d00a1'
+\set K '00000000-0000-0000-0000-0000000d00b1'
+\set X '00000000-0000-0000-0000-0000000d00c1'
+\set U '00000000-0000-0000-0000-0000000d00d1'
+\set V '00000000-0000-0000-0000-0000000d00e1'
+\set as_O 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000d00a1","role":"authenticated"}'', true);'
+\set as_K 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000d00b1","role":"authenticated"}'', true);'
+\set as_X 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000d00c1","role":"authenticated"}'', true);'
+\set as_U 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000d00d1","role":"authenticated"}'', true);'
+\set as_V 'select set_config(''request.jwt.claims'', ''{"sub":"00000000-0000-0000-0000-0000000d00e1","role":"authenticated"}'', true);'
+\set as_anon 'select set_config(''request.jwt.claims'', ''{"role":"anon"}'', true);'
+
+reset role;
+insert into auth.users (id, email) values
+  (:'O', 'dp-owner@test.dev'),
+  (:'K', 'dp-cohost@test.dev'),
+  (:'X', 'dp-stranger@test.dev'),
+  (:'U', 'dp-ulla@test.dev'),
+  (:'V', 'dp-vera@test.dev');
+update public.profiles set display_name = 'Olga' where id = :'O';
+update public.profiles set display_name = 'Kim' where id = :'K';
+update public.profiles set display_name = 'Xavier' where id = :'X';
+update public.profiles set display_name = 'Ulla' where id = :'U';
+update public.profiles set display_name = 'Vera' where id = :'V';
+
+create function pg_temp.mk_poll(p_id uuid, p_token text, p_hours int[], p_capacity int default null,
+                                p_visible boolean default true)
+returns uuid language plpgsql as $$
+declare
+  h int;
+begin
+  perform set_config('checkin.poll_rpc', 'on', true);
+  insert into public.events (id, host_id, title, starts_at, location_text, capacity, guest_list_visible)
+  values (p_id, '00000000-0000-0000-0000-0000000d00a1', 'Poll ' || p_token, null, 'Room', p_capacity, p_visible);
+  perform set_config('checkin.poll_rpc', '', true);
+  foreach h in array p_hours loop
+    insert into public.date_poll_options (event_id, starts_at) values (p_id, now() + make_interval(hours => h));
+  end loop;
+  update public.event_invites set token = p_token where event_id = p_id;
+  insert into public.event_co_hosts (event_id, user_id) values (p_id, '00000000-0000-0000-0000-0000000d00b1');
+  return p_id;
+end $$;
+
+create function pg_temp.opt(p_event uuid, p_n int) returns uuid language sql as $$
+  select id from public.date_poll_options where event_id = p_event order by starts_at offset p_n - 1 limit 1
+$$;
+
+create function pg_temp.guest_token(p_name text) returns text language sql as $$
+  select rpad('dpguest-' || lower(p_name) || '-', 30, 'x')
+$$;
+
+create function pg_temp.ballot(p_event uuid, p_choices text[]) returns jsonb language sql as $$
+  select coalesce(jsonb_agg(jsonb_build_object('option_id', pg_temp.opt(p_event, i), 'choice', p_choices[i]) order by i),
+                  '[]'::jsonb)
+  from generate_subscripts(p_choices, 1) i
+  where p_choices[i] is not null
+$$;
+
+create function pg_temp.event_of(p_token text) returns uuid language sql as $$
+  select event_id from public.event_invites where token = p_token
+$$;
+
+create function pg_temp.vote(p_token text, p_name text, p_choices text[]) returns jsonb language sql as $$
+  select public.submit_votes(p_token, pg_temp.guest_token(p_name), p_name,
+                             pg_temp.ballot(pg_temp.event_of(p_token), p_choices))
+$$;
+
+create function pg_temp.rsvp_status(p_event uuid, p_name text) returns text language sql as $$
+  select status::text from public.rsvps where event_id = p_event and display_name = p_name
+$$;

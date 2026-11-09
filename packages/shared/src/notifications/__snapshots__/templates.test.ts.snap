@@ -274,6 +274,28 @@ exports[`notification templates > push announcement sv 1`] = `
 }
 `;
 
+exports[`notification templates > push date_picked en 1`] = `
+{
+  "body": "Fri 11 Dec, 19:00 · Open the invite to see your answer.",
+  "data": {
+    "kind": "date_picked",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Date set: Fredagshäng",
+}
+`;
+
+exports[`notification templates > push date_picked sv 1`] = `
+{
+  "body": "fre 11 dec. 19:00 · Öppna inbjudan för att se ditt svar.",
+  "data": {
+    "kind": "date_picked",
+    "url": "/i/DemoFredag01",
+  },
+  "title": "Datum klart: Fredagshäng",
+}
+`;
+
 exports[`notification templates > push event_cancelled en 1`] = `
 {
   "body": "Demo Host cancelled the event planned for Fri 11 Dec, 19:00.",

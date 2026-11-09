@@ -26,6 +26,8 @@ export const NOTIFICATION_KINDS = {
   announcement: { urgent: false, channels: ['push', 'email'], staleAfterStart: true },
   rsvp_digest: { urgent: false, channels: ['push'], staleAfterStart: false },
   waitlist_promoted: { urgent: false, channels: ['push', 'email'], staleAfterStart: true },
+  // add-date-polls: to signed-in voters when a poll's date is picked (web voters gave no email).
+  date_picked: { urgent: false, channels: ['push'], staleAfterStart: true },
 } as const satisfies Record<string, NotificationKindConfig>;
 
 export type NotificationKind = keyof typeof NOTIFICATION_KINDS;

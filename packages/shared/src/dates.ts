@@ -6,7 +6,9 @@ export function eventEndsAt(startsAt: Date, endsAt?: Date | null): Date {
   return endsAt ?? new Date(startsAt.getTime() + DEFAULT_EVENT_DURATION_MS);
 }
 
-export function hasEventEnded(startsAt: Date, endsAt?: Date | null, now = new Date()): boolean {
+/** A date-pending event (null start) never ends (mirrors public.event_ended_at()). */
+export function hasEventEnded(startsAt: Date | null, endsAt?: Date | null, now = new Date()): boolean {
+  if (!startsAt) return false;
   return eventEndsAt(startsAt, endsAt).getTime() < now.getTime();
 }
 
@@ -43,6 +45,17 @@ export function formatTimeRange(
       )
     : formatEventTime(endsAt, locale, timeZone);
   return `${start} – ${end}`;
+}
+
+/** A date-poll option, e.g. "Fri 12 Dec, 19:00 – 23:00" (Europe/Stockholm by default). */
+export function formatOption(
+  option: { starts_at: string | Date; ends_at?: string | Date | null },
+  locale: string,
+  timeZone: string = DEFAULT_TIME_ZONE,
+): string {
+  const start = new Date(option.starts_at);
+  const end = option.ends_at ? new Date(option.ends_at) : null;
+  return formatTimeRange(start, end, locale, timeZone);
 }
 
 const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [

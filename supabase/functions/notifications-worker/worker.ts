@@ -25,7 +25,8 @@ export interface DeliveryContext {
   event: {
     id: string;
     title: string;
-    starts_at: string;
+    /** Null while a date poll is open (add-date-polls). */
+    starts_at: string | null;
     ends_at: string | null;
     time_zone: string;
     location_text: string;

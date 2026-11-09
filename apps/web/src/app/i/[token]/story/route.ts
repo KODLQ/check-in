@@ -20,7 +20,8 @@ async function requestLocale(req: NextRequest): Promise<Locale> {
 export async function GET(req: NextRequest, ctx: RouteContext<'/i/[token]/story'>) {
   const { token } = await ctx.params;
   const [invite, locale] = await Promise.all([getInvite(token), requestLocale(req)]);
-  if (invite.state !== 'active') return notFound();
+  // A date poll is active too (add-date-polls): its image says "Date TBD — vote now".
+  if (invite.state !== 'active' && invite.state !== 'date_pending') return notFound();
 
   const model = storyImageModel(invite, locale, token, { siteUrl: env.siteUrl, coverUrl });
   const png = await renderStoryPng(model);

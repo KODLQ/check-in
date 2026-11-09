@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(35);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'host@test.dev'),
@@ -83,6 +83,81 @@ set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 select is(get_invite((select token from t)), '{"state":"cancelled","event":{"title":"Party"}}'::jsonb,
   'cancelled invite shows only title and state');
+
+-- Date-pending events (add-date-polls, task 3.2)
+reset role;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', true);
+create temp table p as select public.create_poll_event(
+  jsonb_build_object('title', 'Poll party', 'location_text', 'Secret St 2'),
+  jsonb_build_array(jsonb_build_object('starts_at', now() + interval '1 day'),
+                    jsonb_build_object('starts_at', now() + interval '2 days', 'ends_at', now() + interval '2 days 3 hours'))) as r;
+grant select on p to anon, authenticated, service_role;
+create function pg_temp.o(n int) returns uuid language sql as $$
+  select id from date_poll_options where event_id = (select (r ->> 'event_id')::uuid from p) order by starts_at offset n - 1 limit 1
+$$;
+select submit_votes((select r ->> 'token' from p), 'guest-token-p1111111111111', 'Pia',
+  jsonb_build_array(jsonb_build_object('option_id', pg_temp.o(1), 'choice', 'yes'),
+                    jsonb_build_object('option_id', pg_temp.o(2), 'choice', 'no')));
+select submit_votes((select r ->> 'token' from p), 'guest-token-p2222222222222', 'Per',
+  jsonb_build_array(jsonb_build_object('option_id', pg_temp.o(1), 'choice', 'if_needed'),
+                    jsonb_build_object('option_id', pg_temp.o(2), 'choice', 'yes')));
+select submit_votes((select r ->> 'token' from p), 'guest-token-p3333333333333', 'Nils',
+  jsonb_build_array(jsonb_build_object('option_id', pg_temp.o(1), 'choice', 'no')));
+create temp table opt_ids as select pg_temp.o(1) as o1, pg_temp.o(2) as o2;
+grant select on opt_ids to anon, authenticated, service_role;
+
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+create temp table inv as select get_invite((select r ->> 'token' from p), 'guest-token-p1111111111111') as j;
+select is((select j ->> 'state' from inv), 'date_pending', 'a pending invite has state date_pending');
+select ok((select not (j ? 'counts') and not (j ? 'guests') and not (j ? 'my_rsvp') from inv),
+  'a pending invite has no counts, guest list or RSVP');
+select is((select j -> 'event' -> 'starts_at' from inv), 'null'::jsonb, 'a pending invite has no start time');
+select is((select j -> 'poll' -> 'options' -> 0 -> 'tallies' from inv), '{"yes": 1, "if_needed": 1, "no": 1}'::jsonb,
+  'guests see the tallies per option');
+select is((select j -> 'poll' -> 'options' -> 0 -> 'voters' from inv),
+  '[{"display_name": "Pia", "choice": "yes"}, {"display_name": "Per", "choice": "if_needed"}]'::jsonb,
+  'with the guest list shown, guests see Yes and If needed names but never No');
+select is((select j -> 'my_votes' from inv),
+  jsonb_build_object('display_name', 'Pia', 'votes', jsonb_build_object((select o1 from opt_ids), 'yes', (select o2 from opt_ids), 'no')),
+  'the guest''s own ballot is returned to the same device');
+select is((select j -> 'poll' -> 'voting_open' from inv), 'true'::jsonb, 'voting is open');
+select is(get_invite((select r ->> 'token' from p)) -> 'my_votes', 'null'::jsonb, 'another device sees no ballot');
+
+reset role;
+update events set guest_list_visible = false where id = (select (r ->> 'event_id')::uuid from p);
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+select is(get_invite((select r ->> 'token' from p)) -> 'poll' -> 'options' -> 0 -> 'voters', 'null'::jsonb,
+  'with the guest list hidden, guests see tallies only');
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+select throws_ok($$ select upsert_rsvp((select r ->> 'token' from p), 'guest-token-p1111111111111', 'Pia', 'going') $$,
+  'P0001', 'date_pending', 'web RSVPs are rejected while the date is pending');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c","role":"authenticated"}', true);
+select throws_ok($$ select rsvp_as_user((select r ->> 'token' from p), 'going') $$,
+  'P0001', 'date_pending', 'app RSVPs are rejected while the date is pending');
+
+-- Deadline passed / every option passed
+reset role;
+select set_config('checkin.poll_rpc', 'on', true);
+update events set poll_closes_at = now() - interval '1 minute' where id = (select (r ->> 'event_id')::uuid from p);
+select set_config('checkin.poll_rpc', '', true);
+select is(get_invite((select r ->> 'token' from p)) -> 'poll' -> 'voting_open', 'false'::jsonb,
+  'after the deadline voting is closed (options and tallies still shown)');
+update date_poll_options set starts_at = starts_at - interval '3 days', ends_at = ends_at - interval '3 days' where event_id = (select (r ->> 'event_id')::uuid from p);
+select is((get_invite((select r ->> 'token' from p)) -> 'poll') - 'options' - 'closes_at',
+  '{"expired": true, "voting_open": false, "voter_count": 3}'::jsonb, 'when every option has passed the poll is expired');
+
+-- Picked
+update date_poll_options set starts_at = starts_at + interval '5 days', ends_at = ends_at + interval '5 days' where event_id = (select (r ->> 'event_id')::uuid from p);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', true);
+select pick_poll_option((select o1 from opt_ids));
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+select is(get_invite((select r ->> 'token' from p)) ->> 'state', 'active', 'a picked event returns the normal active state');
 
 select * from finish();
 rollback;

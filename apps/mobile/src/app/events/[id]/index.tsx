@@ -1,4 +1,4 @@
-import { formatTimeRange, hasEventEnded, inviteUrl, mapsUrl } from '@check-in/shared';
+import { formatOption, formatTimeRange, hasEventEnded, inviteUrl, mapsUrl, pickOutcome, tally } from '@check-in/shared';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -9,6 +9,7 @@ import { AnnouncementComposer, AnnouncementList, AnnouncementsCard, type Announc
 import { Cover } from '@/components/cover';
 import { GuestList, promoteGuest, type GuestRow } from '@/components/guest-list';
 import { HostsCard } from '@/components/hosts-card';
+import { PollResults } from '@/components/poll-results';
 import { StoryShareButton } from '@/components/story-share-button';
 import { Toast } from '@/components/toast';
 import { Body, Button, Card, Label, Screen, Title, useColors } from '@/components/ui';
@@ -16,6 +17,7 @@ import { useAuth } from '@/lib/auth';
 import { INVITE_BASE_URL } from '@/lib/config';
 import { errorKey, fetchActiveInvite } from '@/lib/events';
 import { locale } from '@/lib/i18n';
+import { allVotes, loadHostPoll, type HostPoll, type PollOptionRow, type PollVoterRow } from '@/lib/polls';
 import { supabase, type EventRow, type RsvpRow } from '@/lib/supabase';
 
 /** While the screen is focused, re-check access this often so a removed co-host is told promptly. */
@@ -40,6 +42,8 @@ export default function EventDetail() {
   const [copied, setCopied] = useState(false);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  // Date poll (add-date-polls): only while the event's date is pending.
+  const [poll, setPoll] = useState<HostPoll | null>(null);
   const hideToast = useCallback(() => setToast(null), []);
 
   const loadAnnouncements = useCallback(async () => {
@@ -64,7 +68,11 @@ export default function EventDetail() {
     }
     setEvent(data);
     setToken(await fetchActiveInvite(id));
-    await Promise.all([loadRsvps(), loadAnnouncements()]);
+    await Promise.all([
+      loadRsvps(),
+      loadAnnouncements(),
+      data.starts_at === null ? loadHostPoll(id).then(setPoll) : Promise.resolve(setPoll(null)),
+    ]);
   }, [id, loadRsvps, loadAnnouncements]);
 
   const checkAccess = useCallback(async () => {
@@ -100,6 +108,25 @@ export default function EventDetail() {
     };
   }, [id, loadRsvps, checkAccess]);
 
+  // Live poll results: a ballot touches its voter row, so voters + options cover every change. A pick by
+  // another manager deletes the voters, which reloads the event as a dated one.
+  const datePending = event?.starts_at === null;
+  useEffect(() => {
+    if (!datePending) return;
+    const channel = supabase
+      .channel(`poll:${id}:${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'date_poll_voters', filter: `event_id=eq.${id}` }, () => {
+        void load();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'date_poll_options', filter: `event_id=eq.${id}` }, () => {
+        void load();
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [id, datePending, load]);
+
   if (gone) {
     return (
       <Screen style={{ justifyContent: 'center' }}>
@@ -119,15 +146,51 @@ export default function EventDetail() {
   }
 
   const link = token ? inviteUrl(INVITE_BASE_URL, token) : null;
-  const when = formatTimeRange(new Date(event.starts_at), event.ends_at ? new Date(event.ends_at) : null, locale, event.time_zone);
-  const ended = hasEventEnded(new Date(event.starts_at), event.ends_at ? new Date(event.ends_at) : null);
+  const pending = event.starts_at === null;
+  const when = event.starts_at
+    ? formatTimeRange(new Date(event.starts_at), event.ends_at ? new Date(event.ends_at) : null, locale, event.time_zone)
+    : t('polls.date_tbd');
+  const ended = hasEventEnded(event.starts_at ? new Date(event.starts_at) : null, event.ends_at ? new Date(event.ends_at) : null);
   const editable = !ended && !event.cancelled_at;
   // Owner-only actions (cancel, co-host management) are also enforced server-side.
   const isOwner = !!userId && event.host_id === userId;
 
   async function share() {
     if (!link || !event) return;
-    await Share.share({ message: `${t('events.share_message', { title: event.title, when })}\n${link}`, url: link });
+    const shareWhen = pending ? t('polls.date_tbd_vote') : when;
+    await Share.share({ message: `${t('events.share_message', { title: event.title, when: shareWhen })}\n${link}`, url: link });
+  }
+
+  function confirmPick(o: PollOptionRow) {
+    if (!poll) return;
+    const outcome = pickOutcome(tally(allVotes(poll), o.id), event?.capacity);
+    const body = outcome.waitlisted > 0 ? 'polls.pick_confirm_body_waitlist' : 'polls.pick_confirm_body';
+    Alert.alert(t('polls.pick_confirm_title', { when: formatOption(o, locale, event?.time_zone) }), t(body, outcome), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('polls.pick'),
+        onPress: async () => {
+          const { error } = await supabase.rpc('pick_poll_option', { p_option_id: o.id });
+          if (error) setToast(t(`errors.${errorKey(error)}`, t('common.error')));
+          else setToast(t('polls.picked', { when: formatOption(o, locale, event?.time_zone) }));
+          await load();
+        },
+      },
+    ]);
+  }
+
+  function removeVoter(v: PollVoterRow) {
+    Alert.alert(v.display_name, undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('polls.remove_voter'),
+        style: 'destructive',
+        onPress: async () => {
+          await supabase.from('date_poll_voters').delete().eq('id', v.id);
+          await load();
+        },
+      },
+    ]);
   }
 
   async function copy() {
@@ -282,18 +345,32 @@ export default function EventDetail() {
           </AnnouncementsCard>
         ) : null}
 
+        {pending && poll ? (
+          <PollResults
+            poll={poll}
+            timeZone={event.time_zone}
+            closesAt={event.poll_closes_at}
+            editable={editable}
+            onPick={confirmPick}
+            onRemoveVoter={removeVoter}
+            onEdit={() => router.push(`/events/${id}/poll`)}
+          />
+        ) : null}
+
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Label>{t('events.show_guest_list')}</Label>
           <Switch value={event.guest_list_visible} onValueChange={toggleGuestList} disabled={!editable} />
         </View>
 
-        <GuestList
-          rsvps={rsvps}
-          capacity={event.capacity}
-          editable={editable}
-          onRemove={removeGuest}
-          onPromote={(r) => void promote(r)}
-        />
+        {pending ? null : (
+          <GuestList
+            rsvps={rsvps}
+            capacity={event.capacity}
+            editable={editable}
+            onRemove={removeGuest}
+            onPromote={(r) => void promote(r)}
+          />
+        )}
 
         <HostsCard
           eventId={id}

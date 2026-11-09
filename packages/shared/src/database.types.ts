@@ -49,6 +49,78 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"date_poll_options": {
+                  Row: {
+                    "created_at": string,"ends_at": string | null,"event_id": string,"final_if_needed": number | null,"final_no": number | null,"final_yes": number | null,"id": string,"starts_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"ends_at"?: string | null,"event_id": string,"final_if_needed"?: number | null,"final_no"?: number | null,"final_yes"?: number | null,"id"?: string,"starts_at": string
+                  }
+                  Update: {
+                    "created_at"?: string,"ends_at"?: string | null,"event_id"?: string,"final_if_needed"?: number | null,"final_no"?: number | null,"final_yes"?: number | null,"id"?: string,"starts_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "date_poll_options_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"date_poll_voters": {
+                  Row: {
+                    "created_at": string,"display_name": string,"event_id": string,"guest_token_hash": string | null,"id": string,"updated_at": string,"user_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"display_name": string,"event_id": string,"guest_token_hash"?: string | null,"id"?: string,"updated_at"?: string,"user_id"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"display_name"?: string,"event_id"?: string,"guest_token_hash"?: string | null,"id"?: string,"updated_at"?: string,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "date_poll_voters_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "date_poll_voters_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"date_poll_votes": {
+                  Row: {
+                    "choice": Database["public"]['Enums']["vote_choice"],"option_id": string,"voter_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "choice": Database["public"]['Enums']["vote_choice"],"option_id": string,"voter_id": string
+                  }
+                  Update: {
+                    "choice"?: Database["public"]['Enums']["vote_choice"],"option_id"?: string,"voter_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "date_poll_votes_option_id_fkey"
+      columns: ["option_id"]
+isOneToOne: false
+      referencedRelation: "date_poll_options"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "date_poll_votes_voter_id_fkey"
+      columns: ["voter_id"]
+isOneToOne: false
+      referencedRelation: "date_poll_voters"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"event_announcements": {
                   Row: {
                     "author_id": string | null,"body": string | null,"created_at": string,"deleted_at": string | null,"event_id": string,"id": string
@@ -123,14 +195,14 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "allow_plus_ones": boolean,"cancelled_at": string | null,"capacity": number | null,"cover_path": string | null,"created_at": string,"description": string | null,"ends_at": string | null,"guest_list_visible": boolean,"host_id": string,"id": string,"latitude": number | null,"location_point": unknown,"location_text": string,"longitude": number | null,"max_plus_ones": number,"place_name": string | null,"starts_at": string,"theme": string,"time_changed_at": string | null,"time_zone": string,"title": string,"updated_at": string,"event_ended_at": string | null
+                    "allow_plus_ones": boolean,"cancelled_at": string | null,"capacity": number | null,"cover_path": string | null,"created_at": string,"date_picked_at": string | null,"description": string | null,"ends_at": string | null,"guest_list_visible": boolean,"host_id": string,"id": string,"latitude": number | null,"location_point": unknown,"location_text": string,"longitude": number | null,"max_plus_ones": number,"place_name": string | null,"poll_closes_at": string | null,"starts_at": string | null,"theme": string,"time_changed_at": string | null,"time_zone": string,"title": string,"updated_at": string,"event_ended_at": string | null
                   }
                   ComputedFields: "event_ended_at"
                   Insert: {
-                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text": string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"starts_at": string,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title": string,"updated_at"?: string
+                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text": string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"poll_closes_at"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title": string,"updated_at"?: string
                   }
                   Update: {
-                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text"?: string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"starts_at"?: string,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title"?: string,"updated_at"?: string
+                    "allow_plus_ones"?: boolean,"cancelled_at"?: string | null,"capacity"?: number | null,"cover_path"?: string | null,"created_at"?: string,"date_picked_at"?: string | null,"description"?: string | null,"ends_at"?: string | null,"guest_list_visible"?: boolean,"host_id"?: string,"id"?: string,"latitude"?: number | null,"location_point"?: never,"location_text"?: string,"longitude"?: number | null,"max_plus_ones"?: number,"place_name"?: string | null,"poll_closes_at"?: string | null,"starts_at"?: string | null,"theme"?: string,"time_changed_at"?: string | null,"time_zone"?: string,"title"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -359,6 +431,9 @@ isOneToOne: false
 "apply_quiet_hours":
 { Args: { "p_ts": string,"p_urgent": boolean }; Returns: string
                            },
+"can_read_voter":
+{ Args: { "p_voter_id": string }; Returns: boolean
+                           },
 "cancel_event_notifications":
 { Args: { "p_event_id": string,"p_except_kind"?: string }; Returns: number
                            },
@@ -379,6 +454,9 @@ isOneToOne: false
                            },
 "create_co_host_invite":
 { Args: { "p_event_id": string }; Returns: string
+                           },
+"create_poll_event":
+{ Args: { "p_closes_at"?: string,"p_event": Json,"p_options": Json }; Returns: Json
                            },
 "delete_announcement":
 { Args: { "p_id": string }; Returns: undefined
@@ -440,7 +518,7 @@ isOneToOne: false
 { Args: { "p_bucket": string,"p_max": number,"p_now"?: string,"p_window_seconds": number }; Returns: boolean
                            },
 "invite_payload":
-{ Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"me": Omit<Database["public"]['Tables']["rsvps"]['Row'], Database["public"]['Tables']["rsvps"]['ComputedFields']>,"p_guest_device"?: boolean }; Returns: Json
+{ Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"me": Omit<Database["public"]['Tables']["rsvps"]['Row'], Database["public"]['Tables']["rsvps"]['ComputedFields']>,"p_guest_device"?: boolean,"p_voter_hash"?: string }; Returns: Json
                            },
 "is_event_co_host":
 { Args: { "p_event_id": string }; Returns: boolean
@@ -478,6 +556,7 @@ isOneToOne: false
 "capacity": number | null,
 "cover_path": string | null,
 "created_at": string,
+"date_picked_at": string | null,
 "description": string | null,
 "ends_at": string | null,
 "guest_list_visible": boolean,
@@ -489,7 +568,41 @@ isOneToOne: false
 "longitude": number | null,
 "max_plus_ones": number,
 "place_name": string | null,
-"starts_at": string,
+"poll_closes_at": string | null,
+"starts_at": string | null,
+"theme": string,
+"time_changed_at": string | null,
+"time_zone": string,
+"title": string,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "events"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"lock_event_for_token":
+{ Args: { "p_token": string }; Returns: {
+              "allow_plus_ones": boolean,
+"cancelled_at": string | null,
+"capacity": number | null,
+"cover_path": string | null,
+"created_at": string,
+"date_picked_at": string | null,
+"description": string | null,
+"ends_at": string | null,
+"guest_list_visible": boolean,
+"host_id": string,
+"id": string,
+"latitude": number | null,
+"location_point": unknown,
+"location_text": string,
+"longitude": number | null,
+"max_plus_ones": number,
+"place_name": string | null,
+"poll_closes_at": string | null,
+"starts_at": string | null,
 "theme": string,
 "time_changed_at": string | null,
 "time_zone": string,
@@ -509,6 +622,7 @@ isOneToOne: false
 "capacity": number | null,
 "cover_path": string | null,
 "created_at": string,
+"date_picked_at": string | null,
 "description": string | null,
 "ends_at": string | null,
 "guest_list_visible": boolean,
@@ -520,7 +634,8 @@ isOneToOne: false
 "longitude": number | null,
 "max_plus_ones": number,
 "place_name": string | null,
-"starts_at": string,
+"poll_closes_at": string | null,
+"starts_at": string | null,
 "theme": string,
 "time_changed_at": string | null,
 "time_zone": string,
@@ -542,11 +657,20 @@ isOneToOne: false
 "max_co_hosts":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"max_poll_options":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "max_rsvps_per_event":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "merge_notification_payload":
 { Args: { "p_new": Json,"p_old": Json }; Returns: Json
+                           },
+"min_poll_options":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"my_votes_json":
+{ Args: { "p_voter_id": string }; Returns: Json
                            },
 "notification_is_urgent":
 { Args: { "n": Omit<Database["public"]['Tables']["notifications"]['Row'], Database["public"]['Tables']["notifications"]['ComputedFields']>,"p_now": string }; Returns: boolean
@@ -582,6 +706,7 @@ isOneToOne: false
 "capacity": number | null,
 "cover_path": string | null,
 "created_at": string,
+"date_picked_at": string | null,
 "description": string | null,
 "ends_at": string | null,
 "guest_list_visible": boolean,
@@ -593,7 +718,8 @@ isOneToOne: false
 "longitude": number | null,
 "max_plus_ones": number,
 "place_name": string | null,
-"starts_at": string,
+"poll_closes_at": string | null,
+"starts_at": string | null,
 "theme": string,
 "time_changed_at": string | null,
 "time_zone": string,
@@ -606,6 +732,12 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"pick_poll_option":
+{ Args: { "p_option_id": string }; Returns: Json
+                           },
+"poll_payload":
+{ Args: { "p_event_id": string }; Returns: Json
+                           },
 "post_announcement":
 { Args: { "p_body": string,"p_event_id": string }; Returns: Json
                            },
@@ -645,6 +777,9 @@ isOneToOne: false
 "run_retention":
 { Args: { "p_now"?: string }; Returns: undefined
                            },
+"save_ballot_locked":
+{ Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"p_display_name": string,"p_guest_hash": string,"p_user_id": string,"p_votes": Json }; Returns: Json
+                           },
 "save_rsvp_locked":
 { Args: { "ev": Omit<Database["public"]['Tables']["events"]['Row'], Database["public"]['Tables']["events"]['ComputedFields']>,"p_display_name": string,"p_existing_only"?: boolean,"p_guest_hash": string,"p_plus_ones": number,"p_rename": boolean,"p_status": Database["public"]['Enums']["rsvp_status"],"p_user_id": string }; Returns: {
               "created_at": string,
@@ -671,6 +806,12 @@ isOneToOne: false
 "set_my_rsvp":
 { Args: { "p_event_id": string,"p_plus_ones"?: number,"p_status": Database["public"]['Enums']["rsvp_status"] }; Returns: Json
                            },
+"set_poll_options":
+{ Args: { "p_closes_at"?: string,"p_event_id": string,"p_options": Json }; Returns: number
+                           },
+"submit_votes":
+{ Args: { "p_display_name": string,"p_guest_token": string,"p_token": string,"p_votes": Json }; Returns: Json
+                           },
 "try_uuid":
 { Args: { "p_text": string }; Returns: string
                            },
@@ -683,15 +824,27 @@ isOneToOne: false
 "upsert_rsvp":
 { Args: { "p_display_name": string,"p_email"?: string,"p_email_action"?: string,"p_email_hash"?: string,"p_guest_token": string,"p_locale"?: string,"p_plus_ones"?: number,"p_status": Database["public"]['Enums']["rsvp_status"],"p_token": string }; Returns: Json
                            },
+"validate_poll_options":
+{ Args: { "p_closes_at": string,"p_keep"?: (string)[],"p_old_closes_at"?: string,"p_options": Json }; Returns: undefined
+                           },
+"vote_as_user":
+{ Args: { "p_token": string,"p_votes": Json }; Returns: Json
+                           },
 "waitlist_position":
 { Args: { "p_rsvp_id": string }; Returns: number
                            },
 "withdraw_rsvp":
 { Args: { "p_guest_token": string,"p_token": string }; Returns: boolean
+                           },
+"withdraw_votes":
+{ Args: { "p_guest_token": string,"p_token": string }; Returns: boolean
+                           },
+"withdraw_votes_as_user":
+{ Args: { "p_token": string }; Returns: boolean
                            }
           }
           Enums: {
-            "rsvp_status": "going"|"maybe"|"declined"|"waitlisted"
+            "rsvp_status": "going"|"maybe"|"declined"|"waitlisted","vote_choice": "yes"|"if_needed"|"no"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -811,7 +964,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "rsvp_status": ["going", "maybe", "declined", "waitlisted"]
+            "rsvp_status": ["going", "maybe", "declined", "waitlisted"],"vote_choice": ["yes", "if_needed", "no"]
           }
         }
 } as const

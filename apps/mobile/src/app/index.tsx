@@ -3,6 +3,7 @@ import {
   formatEventTime,
   headCount,
   hostingNudge,
+  pollNeedsPick,
   type HomeItem,
   type MyInvite,
 } from '@check-in/shared';
@@ -27,7 +28,12 @@ import { consumePendingCoHostInvite } from '@/lib/pending-co-host';
 import { onInvitesClaimed } from '@/lib/pending-claim';
 import { supabase, type EventRow } from '@/lib/supabase';
 
-type HostedEvent = EventRow & { rsvps: { status: string; plus_ones: number }[] };
+type HostedEvent = EventRow & {
+  rsvps: { status: string; plus_ones: number }[];
+  /** Date polls (add-date-polls): voter count and option times, only meaningful while starts_at is null. */
+  date_poll_voters: { count: number }[];
+  date_poll_options: { starts_at: string }[];
+};
 type Item = HomeItem<HostedEvent, MyInvite>;
 
 /** "Plan your own" card dismissal is remembered on this device for 7 days. */
@@ -95,7 +101,10 @@ export default function Events() {
 
   const load = useCallback(async () => {
     const [events, mine] = await Promise.all([
-      supabase.from('events').select('*, rsvps(status, plus_ones)').order('starts_at', { ascending: true }),
+      supabase
+        .from('events')
+        .select('*, rsvps(status, plus_ones), date_poll_voters(count), date_poll_options(starts_at)')
+        .order('starts_at', { ascending: true, nullsFirst: true }),
       supabase.rpc('list_my_invites'),
     ]);
     setHosted((events.data as HostedEvent[] | null) ?? []);
@@ -137,10 +146,21 @@ export default function Events() {
 
   const renderItem = ({ item }: { item: Item }) => {
     const e = item.event;
-    const when = formatEventTime(new Date(e.starts_at), locale, e.time_zone);
+    const when = e.starts_at ? formatEventTime(new Date(e.starts_at), locale, e.time_zone) : t('polls.date_tbd');
     let detail: string;
     let onPress: () => void;
-    if (item.kind === 'hosted') {
+    let needsPick = false;
+    if (item.kind === 'hosted' && item.event.starts_at === null) {
+      // Date pending: "Date TBD · N voted", marked when the poll waits for the host to pick (add-date-polls).
+      const voters = item.event.date_poll_voters?.[0]?.count ?? 0;
+      needsPick =
+        !item.cancelled &&
+        pollNeedsPick({ closes_at: item.event.poll_closes_at, options: item.event.date_poll_options ?? [] });
+      detail = needsPick
+        ? `${t('polls.voted_count', { count: voters })} · ${t('polls.needs_pick')}`
+        : t('polls.voted_count', { count: voters });
+      onPress = () => router.push(`/events/${item.id}`);
+    } else if (item.kind === 'hosted') {
       // Going counts heads (guests + plus-ones), against the capacity when there is one.
       const going = headCount(item.event.rsvps);
       const maybe = item.event.rsvps.filter((r) => r.status === 'maybe').length;
@@ -187,12 +207,13 @@ export default function Events() {
             {item.past && !item.cancelled ? (
               <Badge testID={`past-${item.id}`} label={t('events.past_badge')} />
             ) : null}
+            {needsPick ? <Badge testID={`needs-pick-${item.id}`} label={t('polls.needs_pick')} /> : null}
           </View>
           <View style={{ padding: 14, backgroundColor: 'rgba(0,0,0,0.35)' }}>
             <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800' }} numberOfLines={1}>
               {e.title}
             </Text>
-            <Text style={{ color: '#fff' }}>{when}</Text>
+            <Text testID={`when-${item.id}`} style={{ color: '#fff' }}>{when}</Text>
             <Text style={{ color: '#fff' }} numberOfLines={1}>
               {detail}
             </Text>

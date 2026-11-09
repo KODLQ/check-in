@@ -1,4 +1,13 @@
-import { formatHostNames, formatTimeRange, hostedByKey, inviteUrl, type RsvpStatus } from '@check-in/shared';
+import {
+  formatHostNames,
+  formatTimeRange,
+  hostedByKey,
+  inviteUrl,
+  type InvitePoll,
+  type MyVotes,
+  type RsvpStatus,
+  type VoteChoice,
+} from '@check-in/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
@@ -7,20 +16,23 @@ import { ActivityIndicator, ScrollView } from 'react-native';
 
 import { AnnouncementList, AnnouncementsCard, type AnnouncementItem } from '@/components/announcements';
 import { Cover } from '@/components/cover';
+import { PollVoting } from '@/components/poll-voting';
 import { CountsLine, RsvpControls, rsvpErrorText, type RsvpInvite } from '@/components/rsvp-controls';
 import { Body, Button, ErrorText, Screen, Title, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { INVITE_BASE_URL } from '@/lib/config';
 import { locale } from '@/lib/i18n';
+import { errorKey } from '@/lib/events';
 import { maybeAskForPush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 
 interface Invite extends RsvpInvite {
-  state: 'not_found' | 'cancelled' | 'past' | 'active';
+  state: 'not_found' | 'cancelled' | 'past' | 'active' | 'date_pending';
   event?: RsvpInvite['event'] & {
     title: string;
     description?: string | null;
-    starts_at: string;
+    /** Null while a date poll is open. */
+    starts_at: string | null;
     ends_at?: string | null;
     time_zone: string;
     location_text: string;
@@ -30,6 +42,9 @@ interface Invite extends RsvpInvite {
   host?: { display_name: string | null };
   co_hosts?: { display_name: string | null }[];
   announcements?: AnnouncementItem[];
+  /** Date poll (add-date-polls), state 'date_pending' only. */
+  poll?: InvitePoll;
+  my_votes?: MyVotes | null;
 }
 
 /** In-app view of an invite link (opened via universal link or checkin://i/<token>). */
@@ -69,7 +84,31 @@ export default function InviteInApp() {
   }
 
   const e = invite.event;
-  const canRsvp = invite.state === 'active' && !!session && !!profile?.display_name;
+  const signedIn = !!session && !!profile?.display_name;
+  const canRsvp = invite.state === 'active' && signedIn;
+
+  async function vote(votes: { option_id: string; choice: VoteChoice }[]) {
+    setError(null);
+    if (votes.length === 0) {
+      setError(t('errors.no_votes'));
+      return;
+    }
+    setBusy(true);
+    const { error: rpcError } = await supabase.rpc('vote_as_user', { p_token: token, p_votes: votes });
+    setBusy(false);
+    if (rpcError) setError(t(`errors.${errorKey(rpcError)}`, t('common.error')));
+    else void maybeAskForPush('rsvp');
+    // Always reload: a rejected ballot means the poll changed (picked, closed or edited).
+    await load();
+  }
+
+  async function withdrawVotes() {
+    setError(null);
+    setBusy(true);
+    await supabase.rpc('withdraw_votes_as_user', { p_token: token });
+    setBusy(false);
+    await load();
+  }
 
   async function respond(status: RsvpStatus, plusOnes?: number) {
     setError(null);
@@ -94,7 +133,11 @@ export default function InviteInApp() {
       <Body muted>{t(`invite.${hostedByKey(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name))}`, {
           name: formatHostNames(invite.host?.display_name, (invite.co_hosts ?? []).map((h) => h.display_name), locale),
         })}</Body>
-      <Body>{formatTimeRange(new Date(e.starts_at), e.ends_at ? new Date(e.ends_at) : null, locale, e.time_zone)}</Body>
+      <Body>
+        {e.starts_at
+          ? formatTimeRange(new Date(e.starts_at), e.ends_at ? new Date(e.ends_at) : null, locale, e.time_zone)
+          : t('polls.date_tbd')}
+      </Body>
       <Body>📍 {e.location_text}</Body>
       {e.description ? <Body muted>{e.description}</Body> : null}
       {invite.state === 'past' ? <Body muted>{t('invite.past_body')}</Body> : null}
@@ -104,7 +147,25 @@ export default function InviteInApp() {
         </AnnouncementsCard>
       ) : null}
 
-      {canRsvp ? (
+      {invite.state === 'date_pending' && invite.poll ? (
+        <>
+          <PollVoting
+            poll={invite.poll}
+            myVotes={invite.my_votes ?? null}
+            timeZone={e.time_zone}
+            busy={busy}
+            onSave={signedIn ? (v) => void vote(v) : undefined}
+            onWithdraw={signedIn ? () => void withdrawVotes() : undefined}
+          />
+          {!signedIn && invite.poll.voting_open ? (
+            <Button
+              testID="vote-in-browser"
+              title={t('polls.vote_in_browser')}
+              onPress={() => WebBrowser.openBrowserAsync(inviteUrl(INVITE_BASE_URL, token))}
+            />
+          ) : null}
+        </>
+      ) : canRsvp ? (
         <RsvpControls invite={invite} busy={busy} onRespond={(s, n) => void respond(s, n)} />
       ) : invite.state === 'active' ? (
         <Button
@@ -113,7 +174,7 @@ export default function InviteInApp() {
         />
       ) : null}
       <ErrorText>{error}</ErrorText>
-      <CountsLine counts={invite.counts} />
+      {invite.state === 'date_pending' ? null : <CountsLine counts={invite.counts} />}
       {!session ? <Button variant="ghost" title={t('invite.get_app')} onPress={() => router.replace('/sign-in')} /> : null}
     </ScrollView>
   );

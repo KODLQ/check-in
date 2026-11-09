@@ -82,6 +82,19 @@ describe('notification templates', () => {
     expect(renderEmail('waitlist_promoted', 'sv', ctx).subject).toBe('Du fick en plats: Fredagshäng');
   });
 
+  it('tells a voter the date is set (add-date-polls)', () => {
+    const m = renderPush('date_picked', 'en', { ...ctx, urlPath: '/i/DemoFredag01' });
+    expect(m.title).toBe('Date set: Fredagshäng');
+    expect(m.body).toMatch(/Open the invite to see your answer\.$/);
+    expect(m.data).toEqual({ kind: 'date_picked', url: '/i/DemoFredag01' });
+    expect(renderPush('date_picked', 'sv', ctx).title).toBe('Datum klart: Fredagshäng');
+  });
+
+  it('says "Date TBD" instead of a time while a poll is open', () => {
+    const pending = { ...ctx, event: { ...ctx.event, starts_at: null, ends_at: null } };
+    expect(renderEmail('event_cancelled', 'en', pending).text).toContain('planned for Date TBD');
+  });
+
   it('puts the deep link in push data', () => {
     expect(renderPush('rsvp_digest', 'en', { ...ctx, urlPath: '/events/abc' }).data).toEqual({
       kind: 'rsvp_digest',

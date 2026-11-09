@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildHomeSections, hostingNudge } from './home';
 
 const now = new Date('2030-06-15T12:00:00Z');
-const hosted = (id: string, starts_at: string, cancelled = false) => ({
+const hosted = (id: string, starts_at: string | null, cancelled = false) => ({
   id,
   starts_at,
   ends_at: null,
@@ -21,6 +21,16 @@ const invite = (
 });
 
 describe('buildHomeSections', () => {
+  it('lists date-pending events first among upcoming, never as past (add-date-polls)', () => {
+    const s = buildHomeSections(
+      [hosted('h1', '2030-06-20T18:00:00Z'), hosted('poll', null), hosted('old', '2030-06-01T18:00:00Z')],
+      [invite('i1', '2030-06-16T18:00:00Z')],
+      now,
+    );
+    expect(s.upcoming.map((i) => i.id)).toEqual(['poll', 'i1', 'h1']);
+    expect(s.past.map((i) => i.id)).toEqual(['old']);
+  });
+
   it('sorts upcoming ascending and past descending, across hosted and invites', () => {
     const s = buildHomeSections(
       [hosted('h1', '2030-06-20T18:00:00Z'), hosted('h0', '2030-06-01T18:00:00Z')],

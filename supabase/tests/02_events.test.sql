@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(20);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'host@test.dev'),
@@ -62,6 +62,41 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', true);
 select throws_ok($$ update events set title = 'x' where id = '10000000-0000-0000-0000-000000000002' $$,
   'P0001', 'event_ended', 'ended events cannot be edited');
+
+-- Date polls (add-date-polls): pending events are written only by the poll RPCs
+select throws_ok($$ insert into events (title, starts_at, location_text) values ('Poll', null, 'X') $$,
+  'P0001', 'start_required', 'a host cannot insert a date-pending event directly');
+select throws_ok($$ update events set starts_at = null where id = '10000000-0000-0000-0000-000000000001' $$,
+  'P0001', 'start_required', 'a dated event cannot be turned back into a poll');
+
+reset role;
+select set_config('checkin.poll_rpc', 'on', true);
+insert into events (id, host_id, title, starts_at, location_text)
+values ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-00000000000a', 'Pending', null, 'X');
+select set_config('checkin.poll_rpc', '', true);
+select is((select event_ended_at(e) from events e where id = '10000000-0000-0000-0000-000000000003'), null,
+  'a pending event has no end, so it is never past');
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', true);
+select throws_ok($$ update events set starts_at = now() + interval '1 day' where id = '10000000-0000-0000-0000-000000000003' $$,
+  'P0001', 'date_pending', 'a pending event''s time cannot be set directly');
+select throws_ok($$ update events set poll_closes_at = now() + interval '1 hour' where id = '10000000-0000-0000-0000-000000000003' $$,
+  'P0001', 'date_pending', 'the voting deadline cannot be set directly');
+select throws_ok($$ update events set date_picked_at = now() where id = '10000000-0000-0000-0000-000000000003' $$,
+  'P0001', 'date_pending', 'a pick cannot be faked directly');
+select lives_ok($$ update events set title = 'Pending party', location_text = 'Y' where id = '10000000-0000-0000-0000-000000000003' $$,
+  'other fields of a pending event can be edited directly');
+
+-- The poll RPCs' flag lets the pick through, and a pick is not a "time changed"
+select set_config('checkin.poll_rpc', 'on', true);
+update events set starts_at = now() + interval '2 days', date_picked_at = now() where id = '10000000-0000-0000-0000-000000000003';
+select set_config('checkin.poll_rpc', '', true);
+select is((select starts_at is not null and time_changed_at is null from events where id = '10000000-0000-0000-0000-000000000003'),
+  true, 'picking a date sets the start without marking the time as updated');
+update events set starts_at = now() + interval '3 days' where id = '10000000-0000-0000-0000-000000000003';
+select isnt((select time_changed_at from events where id = '10000000-0000-0000-0000-000000000003'), null,
+  'after the pick, time changes are normal edits again');
 
 select * from finish();
 rollback;

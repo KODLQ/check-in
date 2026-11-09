@@ -15,4 +15,4 @@ RSVPs SHALL NOT be accepted for events that are cancelled, have already ended, o
 
 #### Scenario: Date picked
 - **WHEN** the host picks a date for a date-pending event
-- **THEN** RSVPs are accepted from then on under the normal rules
+- **THEN** RSVPs are accepted from then on under the normal rules, including plus-ones, capacity and the waitlist

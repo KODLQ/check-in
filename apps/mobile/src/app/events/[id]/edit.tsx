@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert } from 'react-native';
 
 import { EventForm } from '@/components/event-form';
 import { Screen } from '@/components/ui';
-import { errorKey, toEventRow } from '@/lib/events';
+import { errorKey, toEventDetailsRow, toEventRow } from '@/lib/events';
 import { supabase, type EventRow } from '@/lib/supabase';
 import { pickAndUpload } from '@/lib/upload';
 
@@ -35,16 +35,19 @@ export default function EditEvent() {
     );
   }
 
-  const originalStart = new Date(event.starts_at);
+  // Date pending (add-date-polls): the time is set by picking an option; times are edited on the poll screen.
+  const pending = event.starts_at === null;
+  const originalStart = event.starts_at ? new Date(event.starts_at) : new Date();
 
   return (
     <EventForm
       submitLabel={t('common.save')}
+      datePending={pending}
       // Past start times are only a problem if the host changes them.
       now={() => new Date(Math.min(Date.now(), originalStart.getTime() - 1))}
       initial={{
         title: event.title,
-        startsAt: originalStart,
+        startsAt: pending ? undefined : originalStart,
         endsAt: event.ends_at ? new Date(event.ends_at) : undefined,
         locationText: event.location_text,
         placeName: event.place_name ?? undefined,
@@ -60,7 +63,8 @@ export default function EditEvent() {
       }}
       onPickCover={() => pickAndUpload('covers', `e/${id}`, [16, 9])}
       onSubmit={async (values) => {
-        const { data, error } = await supabase.from('events').update(toEventRow(values)).eq('id', id).select('id');
+        const row = pending ? toEventDetailsRow(values) : toEventRow(values);
+        const { data, error } = await supabase.from('events').update(row).eq('id', id).select('id');
         if (error) return errorKey(error);
         if (!data?.length) return 'no_access';
         router.back();

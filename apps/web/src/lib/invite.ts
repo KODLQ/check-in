@@ -4,7 +4,9 @@ import {
   formatHostNames,
   hostedByKey,
   isValidInviteToken,
+  type InvitePoll,
   type Locale,
+  type MyVotes,
   type RsvpState,
   type RsvpStatus,
 } from '@check-in/shared';
@@ -65,9 +67,25 @@ export interface Announcement {
   created_at: string;
 }
 
+/** Host names shown to guests (add-co-hosts). */
+interface InviteHosts {
+  host: { display_name: string | null; avatar_path: string | null };
+  /** Co-host display names, in the order they joined (add-co-hosts). */
+  co_hosts?: { display_name: string | null }[];
+}
+
 export type Invite =
   | { state: 'not_found' }
   | { state: 'cancelled'; event: { title: string } }
+  | (InviteHosts & {
+      /** Date poll still open (add-date-polls): no time, counts, guest list or RSVP yet. */
+      state: 'date_pending';
+      event: Omit<InviteEvent, 'starts_at' | 'ends_at'> & { starts_at: null; ends_at: null };
+      poll: InvitePoll;
+      /** This browser's (or signed-in user's) ballot. */
+      my_votes: MyVotes | null;
+      announcements: Announcement[];
+    })
   | {
       state: 'active' | 'past';
       event: InviteEvent;

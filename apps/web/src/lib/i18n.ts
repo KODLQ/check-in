@@ -65,3 +65,28 @@ export function clientStrings(t: T) {
   };
 }
 export type ClientStrings = ReturnType<typeof clientStrings>;
+
+/** Strings for the date-poll client component (add-date-polls). Placeholders are filled on the client. */
+export function pollStrings(t: T) {
+  return {
+    yes: t('polls.yes'),
+    ifNeeded: t('polls.if_needed'),
+    no: t('polls.no'),
+    passed: t('polls.passed'),
+    tallies: t('polls.tallies', { yes: '{{yes}}', if_needed: '{{if_needed}}', no: '{{no}}' }),
+    saveVotes: t('polls.save_votes'),
+    removeVotes: t('polls.remove_votes'),
+    yourVotes: t('polls.your_votes', { name: '{{name}}' }),
+    nameLabel: t('rsvp.name_label'),
+    namePlaceholder: t('profile.name_placeholder'),
+    nameRequired: t('errors.name_required'),
+    noVotes: t('errors.no_votes'),
+    rateLimited: t('errors.rate_limited'),
+    pollChanged: t('errors.poll_closed'),
+    optionPassed: t('errors.option_passed'),
+    optionsChanged: t('errors.option_not_found'),
+    eventClosed: t('errors.event_closed'),
+    error: t('common.error'),
+  };
+}
+export type PollStrings = ReturnType<typeof pollStrings>;

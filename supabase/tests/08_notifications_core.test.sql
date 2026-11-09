@@ -18,6 +18,7 @@ select results_eq(
   $$ select kind, urgent, channels, stale_after_start from notification_kinds order by kind $$,
   $$ values
        ('announcement', false, array['push', 'email'], true),
+       ('date_picked', false, array['push'], true),
        ('event_cancelled', true, array['push', 'email'], false),
        ('event_changed', false, array['push', 'email'], false),
        ('event_reminder', false, array['push', 'email'], true),
@@ -87,7 +88,7 @@ select throws_ok($$ select enqueue_notification('announcement', '10000000-0000-0
   '42501', null, 'authenticated cannot call enqueue_notification');
 select throws_ok($$ select cancel_event_notifications('10000000-0000-0000-0000-000000000001') $$,
   '42501', null, 'authenticated cannot call cancel_event_notifications');
-select is((select count(*)::int from notification_kinds), 7, 'authenticated can read the kinds registry');
+select is((select count(*)::int from notification_kinds), 8, 'authenticated can read the kinds registry');
 select throws_ok($$ insert into notification_kinds (kind, channels) values ('spam', array['email']) $$,
   '42501', null, 'authenticated cannot add kinds');
 select ok(is_event_manager('10000000-0000-0000-0000-000000000001'), 'host is an event manager');

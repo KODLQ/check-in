@@ -3,29 +3,8 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import { env } from '@/lib/env';
+import { allowedWrite as allowed } from '@/lib/rate-limit';
 import { serviceClient } from '@/lib/supabase';
-
-// Per IP + invite: max 10 writes per 10 minutes (spec: abuse limits).
-const LIMIT = 10;
-const WINDOW_SECONDS = 600;
-
-function clientIp(req: Request): string {
-  return (
-    req.headers.get('x-real-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'unknown'
-  );
-}
-
-async function allowed(req: Request, token: string): Promise<boolean> {
-  const ipHash = createHash('sha256').update(`${env.rateLimitSalt}:${clientIp(req)}`).digest('hex');
-  const { data, error } = await serviceClient().rpc('hit_rate_limit', {
-    p_bucket: `${ipHash}:${token}`,
-    p_max: LIMIT,
-    p_window_seconds: WINDOW_SECONDS,
-  });
-  return !error && data === true;
-}
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -37,6 +16,8 @@ function mapError(message: string | undefined, details?: string | null) {
   if (message?.includes('plus_ones_not_allowed')) return json({ error: 'plus_ones_not_allowed' }, 400);
   if (message?.includes('invalid_status')) return json({ error: 'invalid_status' }, 400);
   if (message?.includes('event_closed')) return json({ error: 'event_closed' }, 409);
+  // A date poll is still open (add-date-polls): the page shows the poll instead of RSVP options.
+  if (message?.includes('date_pending')) return json({ error: 'date_pending' }, 409);
   if (message?.includes('not_found')) return json({ error: 'not_found' }, 404);
   if (message?.includes('name_required')) return json({ error: 'name_required' }, 400);
   if (message?.includes('rate_limited')) return json({ error: 'rate_limited' }, 429);

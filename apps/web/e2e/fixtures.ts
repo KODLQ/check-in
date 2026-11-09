@@ -123,3 +123,76 @@ export async function mailDetail(id: string) {
   ]);
   return { ...msg, headers };
 }
+
+// ---- Date polls (add-date-polls) ----
+
+/** Runs `fn` in a transaction as the E2E host (RLS and auth.uid() as in the app). */
+async function asHost<T>(fn: (tx: postgres.TransactionSql) => Promise<T>): Promise<T> {
+  await ensureHost();
+  return sql.begin(async (tx) => {
+    await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: HOST_ID, role: 'authenticated' })}, true)`;
+    await tx`set local role authenticated`;
+    return fn(tx);
+  }) as Promise<T>;
+}
+
+/**
+ * Creates a date-pending event through the same RPC the app uses, with one option per entry of `hours`
+ * (now + h hours), and gives its link a known token.
+ */
+export async function createPollEvent(opts: {
+  title?: string;
+  hours?: number[];
+  location?: string;
+  guestListVisible?: boolean;
+  capacity?: number | null;
+} = {}): Promise<string> {
+  const hours = opts.hours ?? [48, 72];
+  const token = `Pol${Date.now().toString(36)}${counter++}`.padEnd(12, 'x').slice(0, 12);
+  const options = hours.map((h) => ({ starts_at: new Date(Date.now() + h * 3600_000).toISOString() }));
+  const event = {
+    title: opts.title ?? 'E2E Poll',
+    location_text: opts.location ?? 'Secret Street 42',
+    guest_list_visible: opts.guestListVisible ?? true,
+    capacity: opts.capacity ?? null,
+  };
+  const created = await asHost(async (tx) => {
+    const [row] = await tx`select public.create_poll_event(${tx.json(event)}, ${tx.json(options)}) as r`;
+    return row!.r as { event_id: string; token: string };
+  });
+  await sql`update public.event_invites set token = ${token} where event_id = ${created.event_id}`;
+  return token;
+}
+
+/** Option ids of a poll, by start time. */
+export async function pollOptionIds(token: string): Promise<string[]> {
+  const rows = await sql`
+    select o.id from public.date_poll_options o
+    join public.event_invites i on i.event_id = o.event_id
+    where i.token = ${token} order by o.starts_at`;
+  return rows.map((r) => r.id as string);
+}
+
+/** The host picks the n-th option (0-based) through pick_poll_option. */
+export async function pickOption(token: string, index: number) {
+  const id = (await pollOptionIds(token))[index]!;
+  return asHost(async (tx) => {
+    const [row] = await tx`select public.pick_poll_option(${id}) as r`;
+    return row!.r as { going: number; maybe: number; waitlisted: number };
+  });
+}
+
+/** Moves a poll's voting deadline (bypassing the RPC's future-only rule, to simulate time passing). */
+export async function setPollDeadline(token: string, closesAt: Date | null) {
+  const eventId = await eventIdFor(token);
+  await sql.begin(async (tx) => {
+    await tx`select set_config('checkin.poll_rpc', 'on', true)`;
+    await tx`update public.events set poll_closes_at = ${closesAt} where id = ${eventId}`;
+  });
+}
+
+/** Moves every option of a poll into the past (simulates an expired poll). */
+export async function expirePoll(token: string) {
+  const eventId = await eventIdFor(token);
+  await sql`update public.date_poll_options set starts_at = starts_at - interval '30 days' where event_id = ${eventId}`;
+}

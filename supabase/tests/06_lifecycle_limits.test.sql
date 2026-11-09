@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(10);
+select plan(12);
 
 insert into auth.users (id, email) values ('00000000-0000-0000-0000-00000000000a', 'host@test.dev');
 
@@ -36,10 +36,25 @@ select throws_ok($$ select hit_rate_limit('ip:2', 2, 600) $$, '42501', null, 'an
 -- Retention
 reset role;
 insert into rsvp_rate_limits (bucket, window_start, count) values ('old', now() - interval '2 days', 5);
+-- Date polls never picked (add-date-polls): kept until 12 months after their latest option.
+set local session_replication_role = replica;
+insert into events (id, host_id, title, starts_at, location_text) values
+  ('10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-00000000000a', 'PollAncient', null, 'X'),
+  ('10000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-00000000000a', 'PollRecent', null, 'X');
+insert into date_poll_options (event_id, starts_at) values
+  ('10000000-0000-0000-0000-000000000004', now() - interval '14 months'),
+  ('10000000-0000-0000-0000-000000000004', now() - interval '13 months'),
+  ('10000000-0000-0000-0000-000000000005', now() - interval '14 months'),
+  ('10000000-0000-0000-0000-000000000005', now() - interval '11 months');
+set local session_replication_role = origin;
 select run_retention();
+select ok(not exists (select 1 from events where id = '10000000-0000-0000-0000-000000000004'),
+  'a pending event whose latest option is over 12 months old is deleted');
+select ok(not exists (select 1 from date_poll_options where event_id = '10000000-0000-0000-0000-000000000004'),
+  'its options go with it');
 select is((select count(*)::int from rsvp_rate_limits where bucket = 'old'), 0, 'rate-limit buckets expire after 24h');
-select is((select array_agg(title order by title) from events where host_id = '00000000-0000-0000-0000-00000000000a'), array['Live', 'Past'],
-  'events are deleted 12 months after they end');
+select is((select array_agg(title order by title) from events where host_id = '00000000-0000-0000-0000-00000000000a'), array['Live', 'Past', 'PollRecent'],
+  'events are deleted 12 months after they end; a poll whose latest option is 11 months old is kept');
 
 select * from finish();
 rollback;

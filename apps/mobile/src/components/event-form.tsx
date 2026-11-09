@@ -1,4 +1,14 @@
-import { EVENT_THEMES, fieldErrors, makeEventInputSchema, MAX_PLUS_ONES, type EventInput } from '@check-in/shared';
+import {
+  EVENT_THEMES,
+  fieldErrors,
+  makeDatePollInputSchema,
+  makeEventInputSchema,
+  MAX_PLUS_ONES,
+  pollErrors,
+  type EditedOption,
+  type EventInput,
+  type PollErrors,
+} from '@check-in/shared';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
@@ -6,12 +16,21 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, Vi
 import { Cover } from './cover';
 import { DateField } from './date-field';
 import { LocationField, type LocationValue } from './location-field';
+import { defaultPollOptions, PollOptionsEditor } from './poll-options-editor';
 import { Body, Button, ErrorText, Field, Label, Stepper, useColors } from './ui';
 
 export interface EventFormValues extends EventInput {
   coverPath?: string | null;
   guestListVisible: boolean;
+  /**
+   * "Let guests vote" (add-date-polls): candidate times instead of startsAt/endsAt, which are then
+   * meaningless and must not be saved.
+   */
+  poll?: { options: { startsAt: Date; endsAt?: Date }[]; closesAt: Date | null };
 }
+
+/** Far enough ahead to pass the start-time rule when only the other fields are being validated. */
+const PLACEHOLDER_START_MS = 365 * 24 * 60 * 60 * 1000;
 
 /** Next full hour + 1 day at 19:00-ish is a reasonable party default. */
 export function defaultStart(now = new Date()): Date {
@@ -27,8 +46,14 @@ export function EventForm({
   onSubmit,
   onPickCover,
   now = () => new Date(),
+  allowPoll = false,
+  datePending = false,
 }: {
   initial?: Partial<EventFormValues>;
+  /** Offer "Fixed date / Let guests vote" (creating an event). */
+  allowPoll?: boolean;
+  /** Editing a date-pending event: its time is set only by picking an option, so no date fields. */
+  datePending?: boolean;
   submitLabel: string;
   /** Returns an error key (errors.*) or nothing on success. */
   onSubmit: (values: EventFormValues) => Promise<string | void>;
@@ -55,6 +80,13 @@ export function EventForm({
   const [maxPlusOnes, setMaxPlusOnes] = useState(initial?.maxPlusOnes ?? 1);
   const [capacityText, setCapacityText] = useState(initial?.capacity != null ? String(initial.capacity) : '');
   const [guestsOpen, setGuestsOpen] = useState(false);
+  // Date poll (add-date-polls).
+  const [mode, setMode] = useState<'fixed' | 'vote'>(initial?.poll ? 'vote' : 'fixed');
+  const [pollOptions, setPollOptions] = useState<EditedOption[]>(
+    initial?.poll?.options ?? defaultPollOptions(initial?.startsAt ?? defaultStart(now())),
+  );
+  const [closesAt, setClosesAt] = useState<Date | null>(initial?.poll?.closesAt ?? null);
+  const [pollErrs, setPollErrs] = useState<PollErrors | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
@@ -63,10 +95,28 @@ export function EventForm({
   async function submit() {
     const trimmedCapacity = capacityText.trim();
     const capacity = trimmedCapacity === '' ? null : /^\d+$/.test(trimmedCapacity) ? Number(trimmedCapacity) : NaN;
-    const raw = { title, startsAt, endsAt, ...location, description, theme, allowPlusOnes, maxPlusOnes, capacity };
+    const voting = allowPoll && mode === 'vote';
+    // Without a fixed date (poll, or editing a pending event) only the other fields are validated here.
+    const noDate = voting || datePending;
+    const raw = {
+      title,
+      startsAt: noDate ? new Date(now().getTime() + PLACEHOLDER_START_MS) : startsAt,
+      endsAt: noDate ? undefined : endsAt,
+      ...location,
+      description,
+      theme,
+      allowPlusOnes,
+      maxPlusOnes,
+      capacity,
+    };
     const parsed = makeEventInputSchema(now).safeParse(raw);
     const fe = fieldErrors(parsed);
-    if (fe || !parsed.success) {
+    const pollParsed = voting
+      ? makeDatePollInputSchema(now).safeParse({ options: pollOptions, closesAt })
+      : null;
+    const pe = pollParsed ? pollErrors(pollParsed) : null;
+    setPollErrs(pe);
+    if (fe || !parsed.success || pe) {
       setErrors(fe ?? {});
       if (fe?.capacity || fe?.maxPlusOnes) setGuestsOpen(true);
       return;
@@ -74,7 +124,13 @@ export function EventForm({
     setErrors({});
     setBusy(true);
     try {
-      const result = await onSubmit({ ...parsed.data, coverPath, guestListVisible });
+      const poll = voting
+        ? {
+            options: pollOptions.map((o) => ({ startsAt: o.startsAt, ...(o.endsAt ? { endsAt: o.endsAt } : {}) })),
+            closesAt,
+          }
+        : undefined;
+      const result = await onSubmit({ ...parsed.data, coverPath, guestListVisible, ...(poll ? { poll } : {}) });
       if (result) setErrors({ _: result });
     } finally {
       setBusy(false);
@@ -131,15 +187,43 @@ export function EventForm({
           error={err('title')}
         />
 
-        <DateField testID="starts-at" label={t('events.starts')} value={startsAt} onChange={setStartsAt} error={err('startsAt')} />
-        {endsAt ? (
-          <DateField testID="ends-at" label={t('events.ends')} value={endsAt} onChange={setEndsAt} error={err('endsAt')} />
-        ) : (
-          <Button
-            variant="ghost"
-            title={`+ ${t('events.add_end')}`}
-            onPress={() => setEndsAt(new Date(startsAt.getTime() + 3 * 60 * 60 * 1000))}
+        {allowPoll ? (
+          <View style={{ flexDirection: 'row', gap: 8 }} accessibilityRole="radiogroup">
+            {(['fixed', 'vote'] as const).map((m) => (
+              <View key={m} style={{ flex: 1 }}>
+                <Button
+                  testID={`mode-${m}`}
+                  variant={mode === m ? 'primary' : 'secondary'}
+                  title={t(m === 'fixed' ? 'polls.mode_fixed' : 'polls.mode_vote')}
+                  onPress={() => setMode(m)}
+                />
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {datePending ? null : allowPoll && mode === 'vote' ? (
+          <PollOptionsEditor
+            options={pollOptions}
+            onChange={setPollOptions}
+            closesAt={closesAt}
+            onChangeClosesAt={setClosesAt}
+            errors={pollErrs}
+            now={now}
           />
+        ) : (
+          <>
+            <DateField testID="starts-at" label={t('events.starts')} value={startsAt} onChange={setStartsAt} error={err('startsAt')} />
+            {endsAt ? (
+              <DateField testID="ends-at" label={t('events.ends')} value={endsAt} onChange={setEndsAt} error={err('endsAt')} />
+            ) : (
+              <Button
+                variant="ghost"
+                title={`+ ${t('events.add_end')}`}
+                onPress={() => setEndsAt(new Date(startsAt.getTime() + 3 * 60 * 60 * 1000))}
+              />
+            )}
+          </>
         )}
 
         <LocationField

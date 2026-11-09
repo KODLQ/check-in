@@ -4,48 +4,20 @@ import type { RsvpStatus } from '@check-in/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 
+import {
+  getGuestToken,
+  GUEST_NAME_KEY,
+  GUEST_STORAGE_KEY,
+  readGuestCookie as readCookie,
+  safeStorage,
+  writeGuestCookie as writeCookie,
+} from '@/lib/guest-device';
 import type { ClientStrings } from '@/lib/i18n';
 import type { MyRsvp } from '@/lib/invite';
 
-const COOKIE = 'ci_guest';
-const STORAGE_KEY = 'ci_guest';
-const NAME_KEY = 'ci_name';
+const STORAGE_KEY = GUEST_STORAGE_KEY;
+const NAME_KEY = GUEST_NAME_KEY;
 const STATUSES: RsvpStatus[] = ['going', 'maybe', 'declined'];
-
-function readCookie(): string | null {
-  const m = document.cookie.match(/(?:^|; )ci_guest=([^;]+)/);
-  return m?.[1] ?? null;
-}
-
-function writeCookie(value: string) {
-  const secure = location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `${COOKIE}=${value}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
-}
-
-function safeStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-/** Random 128-bit device token, base64url (22 chars). Only its hash is stored server-side. */
-function newGuestToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-function getGuestToken(): string {
-  const existing = readCookie() ?? safeStorage()?.getItem(STORAGE_KEY);
-  const token = existing ?? newGuestToken();
-  writeCookie(token);
-  safeStorage()?.setItem(STORAGE_KEY, token);
-  return token;
-}
 
 /**
  * Post-RSVP "Plan your own" prompt. Creates a claim ticket for this browser's RSVPs (guest token in the

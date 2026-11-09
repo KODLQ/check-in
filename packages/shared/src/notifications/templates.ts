@@ -14,7 +14,8 @@ const STRINGS = { en, sv } as const;
 
 export interface NotificationEvent {
   title: string;
-  starts_at: string;
+  /** Null while a date poll is open (add-date-polls). */
+  starts_at: string | null;
   ends_at?: string | null;
   time_zone: string;
   location_text: string;
@@ -75,6 +76,7 @@ export function truncate(text: string, max: number): string {
 
 function when(ctx: RenderContext, locale: NotificationLocale): string {
   const e = ctx.event;
+  if (!e.starts_at) return translate(locale, 'polls.date_tbd');
   return formatTimeRange(new Date(e.starts_at), e.ends_at ? new Date(e.ends_at) : null, locale, e.time_zone);
 }
 
@@ -191,6 +193,12 @@ export const TEMPLATES: Record<NotificationKind, KindTemplate> = {
     email: (ctx, l) => ({
       subject: translate(l, 'notifications.waitlist_promoted.subject', vars(ctx, l)),
       paragraphs: [translate(l, 'notifications.waitlist_promoted.body', vars(ctx, l))],
+    }),
+  },
+  date_picked: {
+    push: (ctx, l) => ({
+      title: translate(l, 'notifications.date_picked.title', vars(ctx, l)),
+      body: translate(l, 'notifications.date_picked.body', vars(ctx, l)),
     }),
   },
 };

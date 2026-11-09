@@ -3,7 +3,7 @@ import { displayInviteUrl, formatEventTime, getTheme, translations, type Locale 
 
 import type { Invite } from './invite';
 
-export type ShownInvite = Extract<Invite, { state: 'active' | 'past' }>;
+export type ShownInvite = Extract<Invite, { state: 'active' | 'past' | 'date_pending' }>;
 
 /** Longest title printed on the story image; longer titles end with an ellipsis (about three lines). */
 export const STORY_TITLE_MAX = 48;
@@ -51,7 +51,8 @@ export function storyImageModel(
   const e = invite.event;
   return {
     title: truncateTitle(e.title),
-    when: formatEventTime(new Date(e.starts_at), locale, e.time_zone),
+    // A date poll shows "Date TBD — vote now", never its options, tallies or names (add-date-polls).
+    when: e.starts_at ? formatEventTime(new Date(e.starts_at), locale, e.time_zone) : translations[locale].polls.date_tbd_vote,
     hostLine: hostedBy(locale, invite.host.display_name ?? ''),
     coverUrl: urls.coverUrl(e.cover_path),
     background: themeBackground(e.theme),

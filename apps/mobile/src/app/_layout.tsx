@@ -62,6 +62,11 @@ function RootStack() {
           name="events/[id]/edit"
           options={{ title: t('events.edit_event'), presentation: 'modal' }}
         />
+        {/* Edit times of a date poll (add-date-polls). */}
+        <Stack.Screen
+          name="events/[id]/poll"
+          options={{ title: t('polls.edit_options'), presentation: 'modal' }}
+        />
         <Stack.Screen name="settings" options={{ title: '' }} />
       </Stack.Protected>
     </Stack>

@@ -11,13 +11,14 @@ export const contentType = 'image/png';
 
 const options = { ...size, headers: { 'cache-control': IMAGE_CACHE_CONTROL } };
 
-// Preview card: cover, title, date and host. Never the address or guest list.
+// Preview card: cover, title, date (or "Date TBD — vote now" for a date poll) and host. Never the address,
+// the guest list, or poll tallies and voter names.
 export default async function Image({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const [invite, locale] = await Promise.all([getInvite(token), getLocale()]);
   const t = makeT(locale);
 
-  if (invite.state !== 'active' && invite.state !== 'past') {
+  if (invite.state !== 'active' && invite.state !== 'past' && invite.state !== 'date_pending') {
     return new ImageResponse(
       (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111114', color: '#fff', fontSize: 64, fontWeight: 800 }}>
@@ -30,7 +31,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
 
   const e = invite.event;
   const cover = coverUrl(e.cover_path);
-  const when = formatEventTime(new Date(e.starts_at), locale, e.time_zone);
+  const when = e.starts_at ? formatEventTime(new Date(e.starts_at), locale, e.time_zone) : t('polls.date_tbd_vote');
 
   return new ImageResponse(
     (

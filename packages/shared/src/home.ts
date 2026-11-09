@@ -1,15 +1,17 @@
 import { hasEventEnded } from './dates';
 import type { RsvpState } from './schemas';
 
-/** Minimal timing fields shared by hosted events and invites. */
+/** Minimal timing fields shared by hosted events and invites. `starts_at` is null while a date poll is open. */
 export interface EventTiming {
   id: string;
-  starts_at: string;
+  starts_at: string | null;
   ends_at: string | null;
 }
 
 /** One item of `list_my_invites()` (an event the user answered through their account). */
 export interface MyInvite extends EventTiming {
+  /** Invites always have a date: RSVPs are only possible once a poll's date is picked. */
+  starts_at: string;
   title: string;
   time_zone: string;
   cover_path: string | null;
@@ -24,13 +26,22 @@ export type HomeItem<H, I> =
   | { kind: 'invite'; id: string; event: I; past: boolean; cancelled: boolean };
 
 export interface HomeSections<H, I> {
-  /** Not yet ended, soonest first. Cancelled events stay here (flagged) until their time has passed. */
+  /**
+   * Not yet ended: date-pending events first (add-date-polls), then soonest first. Cancelled events stay
+   * here (flagged) until their time has passed.
+   */
   upcoming: HomeItem<H, I>[];
   /** Ended, most recent first. */
   past: HomeItem<H, I>[];
 }
 
-const startMs = (i: { event: EventTiming }) => new Date(i.event.starts_at).getTime();
+/** Ascending by start; a pending event (null start) sorts before every date. */
+const byStart = (a: { event: EventTiming }, b: { event: EventTiming }) => {
+  if (a.event.starts_at === null || b.event.starts_at === null) {
+    return (a.event.starts_at === null ? 0 : 1) - (b.event.starts_at === null ? 0 : 1);
+  }
+  return new Date(a.event.starts_at).getTime() - new Date(b.event.starts_at).getTime();
+};
 
 /**
  * Merges hosted events and invites into the home list (spec: my-invites). An event that is both hosted
@@ -41,7 +52,7 @@ export function buildHomeSections<
   I extends EventTiming & { state: MyInvite['state'] },
 >(hosted: readonly H[], invites: readonly I[], now: Date = new Date()): HomeSections<H, I> {
   const ended = (e: EventTiming) =>
-    hasEventEnded(new Date(e.starts_at), e.ends_at ? new Date(e.ends_at) : null, now);
+    hasEventEnded(e.starts_at ? new Date(e.starts_at) : null, e.ends_at ? new Date(e.ends_at) : null, now);
   const hostedIds = new Set(hosted.map((e) => e.id));
   const items: HomeItem<H, I>[] = [
     ...hosted.map((event) => ({
@@ -62,8 +73,9 @@ export function buildHomeSections<
       })),
   ];
   return {
-    upcoming: items.filter((i) => !i.past).sort((a, b) => startMs(a) - startMs(b)),
-    past: items.filter((i) => i.past).sort((a, b) => startMs(b) - startMs(a)),
+    upcoming: items.filter((i) => !i.past).sort(byStart),
+    // Pending events are never past, so only dated events land here.
+    past: items.filter((i) => i.past).sort((a, b) => byStart(b, a)),
   };
 }
 

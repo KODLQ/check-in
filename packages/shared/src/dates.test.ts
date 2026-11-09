@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatEventTime, formatRelativeTime, formatTimeRange, hasEventEnded } from './dates';
+import { formatEventTime, formatOption, formatRelativeTime, formatTimeRange, hasEventEnded } from './dates';
 
 describe('hasEventEnded', () => {
   const start = new Date('2026-12-12T19:00:00Z');
@@ -7,6 +7,9 @@ describe('hasEventEnded', () => {
     const end = new Date('2026-12-12T23:00:00Z');
     expect(hasEventEnded(start, end, new Date('2026-12-12T22:59:00Z'))).toBe(false);
     expect(hasEventEnded(start, end, new Date('2026-12-12T23:01:00Z'))).toBe(true);
+  });
+  it('never ends while the date is pending', () => {
+    expect(hasEventEnded(null, null, new Date('2099-01-01T00:00:00Z'))).toBe(false);
   });
   it('falls back to 12 hours after start', () => {
     expect(hasEventEnded(start, null, new Date('2026-12-13T06:59:00Z'))).toBe(false);
@@ -50,5 +53,14 @@ describe('formatRelativeTime without Intl.RelativeTimeFormat', () => {
     } finally {
       intl.RelativeTimeFormat = original;
     }
+  });
+});
+
+describe('formatOption', () => {
+  it('formats a poll option in Stockholm time, with its end', () => {
+    expect(formatOption({ starts_at: '2026-12-11T18:00:00Z', ends_at: '2026-12-11T22:00:00Z' }, 'en')).toBe(
+      formatTimeRange(new Date('2026-12-11T18:00:00Z'), new Date('2026-12-11T22:00:00Z'), 'en'),
+    );
+    expect(formatOption({ starts_at: '2026-12-11T18:00:00Z', ends_at: null }, 'sv')).toMatch(/fre 11 dec\.? 19:00/);
   });
 });

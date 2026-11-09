@@ -130,6 +130,115 @@ export const announcementInputSchema = z.object({
 });
 export type AnnouncementInput = z.infer<typeof announcementInputSchema>;
 
+// ---- Date polls (add-date-polls) ----------------------------------------------------------------
+
+/** A guest's answer to one candidate time. Mirrors the `vote_choice` enum. */
+export const VOTE_CHOICES = ['yes', 'if_needed', 'no'] as const;
+export type VoteChoice = (typeof VOTE_CHOICES)[number];
+
+/** A poll has 2 to 4 candidate start times (mirrors public.min/max_poll_options()). */
+export const MIN_POLL_OPTIONS = 2;
+export const MAX_POLL_OPTIONS = 4;
+
+export const pollOptionSchema = z.object({
+  /** Existing option (editing). Omitted for new options. */
+  id: z.string().optional(),
+  startsAt: z.date({ error: 'start_required' }),
+  endsAt: z.date().optional(),
+});
+export type PollOptionInput = z.infer<typeof pollOptionSchema>;
+
+/**
+ * Candidate times and optional voting deadline, with the same rules as the database
+ * (public.validate_poll_options): 2-4 options, starts in the future and distinct, end after start,
+ * deadline in the future and no later than the earliest future option.
+ * Editing: options whose id is in `keepIds` are unchanged and may already have passed, and an unchanged
+ * deadline (`previousClosesAt`) that has already passed is accepted.
+ * Errors: `options` -> poll_option_count; `options.<i>.startsAt|endsAt` -> option_in_past,
+ * option_duplicate, end_before_start; `closesAt` -> deadline_invalid. Read them with pollErrors().
+ */
+export const makeDatePollInputSchema = (
+  now: () => Date = () => new Date(),
+  opts: { keepIds?: readonly string[]; previousClosesAt?: Date | null } = {},
+) =>
+  z
+    .object({
+      options: z.array(pollOptionSchema),
+      closesAt: z.date().nullable().optional(),
+    })
+    .superRefine((v, ctx) => {
+      const t = now().getTime();
+      const keep = new Set(opts.keepIds ?? []);
+      if (v.options.length < MIN_POLL_OPTIONS || v.options.length > MAX_POLL_OPTIONS) {
+        ctx.addIssue({ code: 'custom', path: ['options'], message: 'poll_option_count' });
+      }
+      const seen = new Set<number>();
+      let earliestOpen: number | null = null;
+      v.options.forEach((o, i) => {
+        const s = o.startsAt.getTime();
+        if (s <= t && !(o.id && keep.has(o.id))) {
+          ctx.addIssue({ code: 'custom', path: ['options', i, 'startsAt'], message: 'option_in_past' });
+        } else if (seen.has(s)) {
+          ctx.addIssue({ code: 'custom', path: ['options', i, 'startsAt'], message: 'option_duplicate' });
+        }
+        seen.add(s);
+        if (o.endsAt && o.endsAt.getTime() <= s) {
+          ctx.addIssue({ code: 'custom', path: ['options', i, 'endsAt'], message: 'end_before_start' });
+        }
+        if (s > t && (earliestOpen === null || s < earliestOpen)) earliestOpen = s;
+      });
+      if (v.closesAt) {
+        const c = v.closesAt.getTime();
+        const unchangedPassed = opts.previousClosesAt?.getTime() === c && c <= t;
+        if (!unchangedPassed && (c <= t || earliestOpen === null || c > earliestOpen)) {
+          ctx.addIssue({ code: 'custom', path: ['closesAt'], message: 'deadline_invalid' });
+        }
+      }
+    });
+export type DatePollInput = z.infer<ReturnType<typeof makeDatePollInputSchema>>;
+
+export interface PollErrors {
+  /** Whole-poll error (poll_option_count). */
+  options?: string;
+  closesAt?: string;
+  /** Per option index: { startsAt?, endsAt? }. */
+  byOption: Record<number, { startsAt?: string; endsAt?: string }>;
+}
+
+/** Splits date-poll schema issues into whole-poll, deadline and per-option error keys (first one wins). */
+export function pollErrors<T>(result: z.ZodSafeParseResult<T>): PollErrors | null {
+  if (result.success) return null;
+  const out: PollErrors = { byOption: {} };
+  for (const issue of result.error.issues) {
+    const [root, index, field] = issue.path;
+    if (root === 'closesAt') out.closesAt ??= issue.message;
+    else if (root === 'options' && typeof index === 'number' && (field === 'startsAt' || field === 'endsAt')) {
+      const slot = (out.byOption[index] ??= {});
+      slot[field] ??= issue.message;
+    } else if (root === 'options') out.options ??= issue.message;
+  }
+  return out;
+}
+
+/** One answer in a ballot. */
+export const voteSchema = z.object({
+  optionId: z.uuid(),
+  choice: z.enum(VOTE_CHOICES),
+});
+
+/** POST /api/votes body: a guest's whole ballot (options left out are unanswered). */
+export const ballotInputSchema = z.object({
+  token: z.string().regex(/^[A-Za-z0-9]{12}$/),
+  guestToken: guestTokenSchema,
+  displayName: displayNameSchema,
+  votes: z
+    .array(voteSchema)
+    .min(1, 'no_votes')
+    .max(MAX_POLL_OPTIONS, 'option_not_found')
+    .refine((votes) => new Set(votes.map((v) => v.optionId)).size === votes.length, 'option_not_found'),
+});
+export type BallotInput = z.infer<typeof ballotInputSchema>;
+
 /** Returns a map of field -> first error key, or null when valid. */
 export function fieldErrors<T>(
   result: z.ZodSafeParseResult<T>,

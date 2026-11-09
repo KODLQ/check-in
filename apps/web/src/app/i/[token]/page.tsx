@@ -1,12 +1,21 @@
-import { formatEventTime, formatRelativeTime, formatTimeRange, getTheme, inviteUrl, mapsUrl } from '@check-in/shared';
+import {
+  formatEventTime,
+  formatOption,
+  formatRelativeTime,
+  formatTimeRange,
+  getTheme,
+  inviteUrl,
+  mapsUrl,
+} from '@check-in/shared';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 
 import { googleCalendarUrl } from '@/lib/calendar';
 import { env } from '@/lib/env';
-import { clientStrings, getLocale, makeT } from '@/lib/i18n';
+import { clientStrings, getLocale, makeT, pollStrings } from '@/lib/i18n';
 import { getInvite, GUEST_COOKIE, hostedByLine } from '@/lib/invite';
 import { avatarUrl, coverUrl } from '@/lib/supabase';
+import { PollForm } from './poll-form';
 import { RsvpForm } from './rsvp-form';
 import { ShareInvite } from './share-invite';
 
@@ -28,7 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (invite.state === 'cancelled') return { title: invite.event.title, description: t('invite.cancelled_body'), robots };
 
   const e = invite.event;
-  const when = formatEventTime(new Date(e.starts_at), locale, e.time_zone);
+  // A date poll shows "Date TBD — vote now" instead of a time, and never tallies or names.
+  const when = e.starts_at ? formatEventTime(new Date(e.starts_at), locale, e.time_zone) : t('polls.date_tbd_vote');
   // Deliberately excludes the address and the guest list (spec: rich link previews).
   const description = `${when} · ${hostedByLine(invite, locale, t)}`;
   return {
@@ -62,17 +72,28 @@ export default async function InvitePage({ params }: Props) {
   }
 
   const e = invite.event;
-  const start = new Date(e.starts_at);
-  const end = e.ends_at ? new Date(e.ends_at) : null;
   const theme = getTheme(e.theme);
   const cover = coverUrl(e.cover_path);
   const avatar = avatarUrl(invite.host.avatar_path);
   const url = inviteUrl(env.siteUrl, token);
-  const cal = { uid: token, title: e.title, description: e.description, location: e.location_text, start, end, url };
-  const going = invite.counts.going;
 
-  return (
-    <main className="page">
+  const share =
+    invite.state === 'active' || invite.state === 'date_pending' ? (
+      <ShareInvite
+        token={token}
+        url={url}
+        strings={{
+          share: t('story.share'),
+          saveImage: t('story.save_image'),
+          copyLink: t('story.copy_link'),
+          copied: t('story.copied'),
+          shareText: t('story.share_text', { title: e.title }),
+        }}
+      />
+    ) : null;
+
+  const header = (
+    <>
       <div
         className="cover"
         style={{ background: `linear-gradient(135deg, ${theme.colors[0]}, ${theme.colors[1]})` }}
@@ -87,8 +108,11 @@ export default async function InvitePage({ params }: Props) {
       </div>
 
       <div className="meta">
-        <div>
-          🗓 {formatTimeRange(start, end, locale, e.time_zone)}
+        <div data-testid="when">
+          🗓{' '}
+          {e.starts_at
+            ? formatTimeRange(new Date(e.starts_at), e.ends_at ? new Date(e.ends_at) : null, locale, e.time_zone)
+            : t('polls.date_tbd')}
           {e.time_changed_at ? <span className="badge"> · {t('invite.time_updated')}</span> : null}
         </div>
         <div>
@@ -116,6 +140,42 @@ export default async function InvitePage({ params }: Props) {
           </ul>
         </section>
       ) : null}
+    </>
+  );
+
+  // Date poll (add-date-polls): the options with voting replace the date, RSVP, guest list and calendar.
+  if (invite.state === 'date_pending') {
+    const poll = invite.poll;
+    const labels = Object.fromEntries(poll.options.map((o) => [o.id, formatOption(o, locale, e.time_zone)]));
+    return (
+      <main className="page">
+        {header}
+        <section className="card" aria-label={t('polls.title')}>
+          <strong>{t('polls.title')}</strong>
+          <p className="muted" style={{ margin: 0 }} data-testid="poll-status">
+            {poll.expired
+              ? t('polls.not_scheduled')
+              : !poll.voting_open
+                ? t('polls.voting_closed')
+                : poll.closes_at
+                  ? `${t('polls.intro')} ${t('polls.closes_at', { when: formatEventTime(new Date(poll.closes_at), locale, e.time_zone) })}`
+                  : t('polls.intro')}
+          </p>
+        </section>
+        <PollForm token={token} poll={poll} labels={labels} myVotes={invite.my_votes} strings={pollStrings(t)} />
+        {poll.voting_open ? share : null}
+      </main>
+    );
+  }
+
+  const start = new Date(invite.event.starts_at);
+  const end = e.ends_at ? new Date(e.ends_at) : null;
+  const cal = { uid: token, title: e.title, description: e.description, location: e.location_text, start, end, url };
+  const going = invite.counts.going;
+
+  return (
+    <main className="page">
+      {header}
 
       {invite.state === 'past' ? (
         <p className="card muted" data-testid="past">{t('invite.past_body')}</p>
@@ -164,19 +224,7 @@ export default async function InvitePage({ params }: Props) {
         ) : null}
       </section>
 
-      {invite.state === 'active' ? (
-        <ShareInvite
-          token={token}
-          url={url}
-          strings={{
-            share: t('story.share'),
-            saveImage: t('story.save_image'),
-            copyLink: t('story.copy_link'),
-            copied: t('story.copied'),
-            shareText: t('story.share_text', { title: e.title }),
-          }}
-        />
-      ) : null}
+      {share}
 
       {invite.state === 'active' ? (
         <div className="actions">

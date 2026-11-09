@@ -114,21 +114,25 @@ Voter names SHALL follow the event's guest-list visibility setting. When the gue
 - **THEN** guests see only the tallies per option, without names
 
 ### Requirement: Host live poll results
-The host SHALL see every option with its tallies and the names and answers of all voters, updating live while open. The option with the most Yes answers SHALL be highlighted, with If needed answers breaking ties.
+The host and co-hosts SHALL see every option with its tallies and the names and answers of all voters, updating live while open. The option with the most Yes answers SHALL be highlighted, with If needed answers breaking ties.
 
 #### Scenario: Vote while host is watching
 - **WHEN** a guest votes while the host has the poll results open
 - **THEN** the tallies and voter names update within a few seconds without a manual refresh
 
+#### Scenario: Co-host sees results
+- **WHEN** a co-host opens a date-pending event in the app
+- **THEN** they see the same tallies, voter names and answers as the owner
+
 ### Requirement: Host removes a voter
-The host SHALL be able to remove any voter and all their answers from the poll.
+The host and co-hosts SHALL be able to remove any voter and all their answers from the poll.
 
 #### Scenario: Spam voter removed
 - **WHEN** the host removes a voter
 - **THEN** that voter's name and answers disappear from the poll for everyone
 
 ### Requirement: Edit options after votes exist
-While the poll is unpicked, the host SHALL be able to add, change and remove options within the 2 to 4 limit. Removing an option or changing its times SHALL delete that option's votes, and the host MUST be shown how many votes will be deleted and confirm first.
+While the poll is unpicked, the host and co-hosts SHALL be able to add, change and remove options within the 2 to 4 limit. Removing an option or changing its times SHALL delete that option's votes, and the host MUST be shown how many votes will be deleted and confirm first.
 
 #### Scenario: Removing an option with votes
 - **WHEN** the host removes an option that has 3 votes
@@ -139,7 +143,7 @@ While the poll is unpicked, the host SHALL be able to add, change and remove opt
 - **THEN** existing votes on other options are kept and the new option has no votes
 
 ### Requirement: Host picks the date
-The host SHALL be able to pick one option at any time before the event is cancelled. Picking SHALL set the event's start and end time to the option's, close the poll, and from then on the event SHALL behave like a normal event with that time. A pick MUST NOT be undone.
+The host or a co-host SHALL be able to pick one option at any time before the event is cancelled. Picking SHALL set the event's start and end time to the option's, close the poll, and from then on the event SHALL behave like a normal event with that time. A pick MUST NOT be undone.
 
 #### Scenario: Host picks an option
 - **WHEN** the host picks an option and confirms
@@ -149,8 +153,16 @@ The host SHALL be able to pick one option at any time before the event is cancel
 - **WHEN** the host tries to pick an option whose start time has already passed
 - **THEN** the pick is rejected and the poll stays open
 
+#### Scenario: Co-host picks
+- **WHEN** a co-host picks an option and confirms
+- **THEN** the event gets that date exactly as if the owner had picked it
+
+#### Scenario: Two managers pick at once
+- **WHEN** the owner and a co-host pick different options at the same moment
+- **THEN** exactly one pick is applied and the other is told a date was already picked
+
 #### Scenario: Non-host cannot pick
-- **WHEN** anyone other than the host tries to pick an option
+- **WHEN** anyone other than the host or a co-host tries to pick an option
 - **THEN** the pick is rejected
 
 ### Requirement: Votes become RSVPs on pick
@@ -168,15 +180,41 @@ When an option is picked, each voter who answered Yes to it SHALL get a Going RS
 - **WHEN** the host picks an option that a guest answered No to
 - **THEN** that guest has no RSVP and can still RSVP normally from the invite
 
+### Requirement: Pick respects capacity
+When the event has a capacity, Yes voters SHALL be converted in the order they first voted, and a voter whose Going answer does not fit SHALL be put on the waitlist in that order instead. Converted Going answers SHALL carry no plus-ones; the guest MAY add plus-ones afterwards under the normal RSVP rules.
+
+#### Scenario: More Yes voters than spots
+- **WHEN** the host picks an option with 5 Yes voters on an event with capacity 3
+- **THEN** the first 3 voters to have voted become Going and the other 2 are waitlisted in voting order
+
+#### Scenario: Converted guest adds a plus-one
+- **WHEN** a guest converted to Going later adds a plus-one on an event that allows them
+- **THEN** the answer is saved under the normal plus-one and capacity rules
+
+### Requirement: Event details editable while pending
+The host and co-hosts SHALL be able to edit every other field of a date-pending event as for a dated event. Its start and end time SHALL only be set by picking an option, and a dated event SHALL NOT be turned back into a poll.
+
+#### Scenario: Host edits the location while pending
+- **WHEN** the host changes the location of a date-pending event
+- **THEN** guests see the new location on the invite page and the poll is unchanged
+
+#### Scenario: Direct time change while pending
+- **WHEN** someone tries to set a start time on a date-pending event other than by picking an option
+- **THEN** the change is rejected
+
 ### Requirement: Notify voters when a date is picked
-When a date is picked, the system SHALL send a "date picked" update to voters through the notifications capability when it is available to them. The invite page MUST show the picked date regardless of whether any notification is delivered.
+When a date is picked, the system SHALL send a "date picked" push to every voter who voted as a signed-in app user, whatever their answer. Web voters SHALL NOT be emailed, because voting collects no email address. The invite page MUST show the picked date regardless of whether any notification is delivered.
+
+#### Scenario: App voter is notified
+- **WHEN** a date is picked and a voter voted from the app with notifications allowed
+- **THEN** they get one "date picked" push that opens the invite
 
 #### Scenario: Notifications unavailable
 - **WHEN** a date is picked and a voter has no way to receive notifications
 - **THEN** the voter sees the picked date and their converted RSVP the next time they open the invite
 
 ### Requirement: Cancel a date-pending event
-The host SHALL be able to cancel a date-pending event. Its invite page SHALL then show it as cancelled and SHALL NOT accept votes or RSVPs.
+The owner SHALL be able to cancel a date-pending event; co-hosts SHALL NOT, as for any event. Its invite page SHALL then show it as cancelled and SHALL NOT accept votes or RSVPs.
 
 #### Scenario: Guest opens cancelled poll
 - **WHEN** a guest opens the invite of a cancelled date-pending event
