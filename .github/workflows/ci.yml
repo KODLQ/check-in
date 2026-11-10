@@ -5,12 +5,22 @@ on:
     branches: [main]
   pull_request:
 
+# A newer push to the same branch or PR replaces the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Same version as the `supabase` devDependency, so CI runs the CLI developers use.
+  SUPABASE_CLI_VERSION: 3.0.0
+
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -19,19 +29,21 @@ jobs:
       - run: npm run typecheck
       - run: npm test -w @check-in/shared
       - run: npm test -w @check-in/mobile
+      - run: npm run test:unit -w @check-in/web
       - run: npm run test:functions
 
   database:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: ${{ env.SUPABASE_CLI_VERSION }}
       - run: npm ci
       - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
       - run: supabase test db
@@ -40,20 +52,43 @@ jobs:
 
   web-e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: ${{ env.SUPABASE_CLI_VERSION }}
       - run: npm ci
       # Edge runtime stays on: e2e/notifications.spec.ts goes web -> worker -> Mailpit.
       - run: cp supabase/functions/.env.example supabase/functions/.env
       - run: supabase start -x studio,imgproxy,logflare,vector,supavisor
       - run: npm run db:worker:configure
+      # The web app reads the local stack's URL and keys from .env.local (never committed).
+      - name: Write apps/web/.env.local from the local stack
+        run: |
+          eval "$(supabase status -o env)"
+          grep -vE '^SUPABASE_(URL|PUBLISHABLE_KEY|SECRET_KEY)=' apps/web/.env.example > apps/web/.env.local
+          {
+            echo "SUPABASE_URL=${API_URL}"
+            echo "SUPABASE_PUBLISHABLE_KEY=${PUBLISHABLE_KEY:-$ANON_KEY}"
+            echo "SUPABASE_SECRET_KEY=${SECRET_KEY:-$SERVICE_ROLE_KEY}"
+          } >> apps/web/.env.local
+          grep -q '^SUPABASE_SECRET_KEY=..*' apps/web/.env.local
       - run: npx playwright install --with-deps chromium
         working-directory: apps/web
       - run: npm run test:e2e -w @check-in/web
+        env:
+          CI: 'true'
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
