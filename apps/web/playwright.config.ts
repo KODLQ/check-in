@@ -4,6 +4,8 @@ const PORT = 3100;
 
 export default defineConfig({
   testDir: './e2e',
+  // Snapshots here are text (page metadata), the same on every OS, so CI (Linux) and macOS share one file.
+  snapshotPathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{-projectName}{ext}',
   fullyParallel: false,
   workers: 1,
   use: { baseURL: `http://localhost:${PORT}`, locale: 'en-GB', timezoneId: 'Europe/Stockholm' },
